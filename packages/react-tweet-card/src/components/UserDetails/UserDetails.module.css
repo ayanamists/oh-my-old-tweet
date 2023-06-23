@@ -1,0 +1,15 @@
+.userDetails {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  width: fit-content;
+  place-items: center;
+  color: inherit;
+  text-decoration: none;
+  row-gap: 0.075em;
+  column-gap: 0.5em;
+}
+
+.userDetails > span {
+  grid-column: 2;
+}

@@ -1,0 +1,25 @@
+<style>
+  body {
+    padding: 20px;
+    background-color: #f6f6f6;
+  }
+
+  body.showBackgroundPic {
+    background-image: url(https://images.unsplash.com/photo-1674318012388-141651b08a51?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2232&q=80);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
+  }
+
+  #root {
+    width: 500px;
+    height: 200px;
+    padding: 5px;
+    resize: both;
+    overflow: auto;
+  }
+
+  body.hasTweetImage #root {
+    height: 400px;
+  }
+</style>

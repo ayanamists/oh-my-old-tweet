@@ -1,0 +1,24 @@
+.details {
+    grid-column: 1 / 3;
+    margin: 0;
+    font-family: Inter, sans-serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 125%;
+    letter-spacing: -0.03em;
+    text-align: start;
+    color: var(--tweet-card-secondary);
+}
+
+.details a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.details a:hover {
+    text-decoration: underline;
+}
+
+.source {
+    color: var(--tweet-card-accent);
+}

@@ -1,0 +1,8 @@
+.username {
+    font-size: 0.8em;
+    font-family: Inter, sans-serif;
+    font-weight: 400;
+    color: var(--tweet-card-secondary);
+    letter-spacing: -0.03em;
+    place-self: start;
+}

@@ -1,0 +1,73 @@
+.engagement {
+  grid-column: 1 / 3;
+  color: var(--tweet-card-primary);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  max-width: 20em;
+  font-size: 1.1em;
+  font-weight: 500;
+  font-family: Inter, sans-serif;
+}
+
+.engagement > span {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.7;
+  cursor: default;
+  transition: all 0.1s linear;
+}
+
+.engagement > span:hover {
+  opacity: 1;
+  color: var(--tweet-card-accent);
+}
+
+.engagement > span > span,
+.engagement > span > div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: content-box;
+  position: relative;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.4em;
+  padding: 0.4em;
+  border-radius: 50%;
+}
+
+.engagement b,
+.engagement svg {
+  z-index: 2;
+}
+
+.engagement > span > div::after,
+.engagement > span > span::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  background-color: transparent;
+  opacity: 0;
+  border-radius: 50%;
+  transition: all 0.1s linear;
+}
+
+.engagement > span:hover > div::after,
+.engagement > span:hover > span::after {
+  background-color: var(--tweet-card-accent);
+  opacity: 0.1;
+}
+
+.engagement > span > div svg {
+  fill: var(--tweet-card-primary);
+  flex: 1;
+}
+
+.engagement > span:hover > div svg {
+  fill: var(--tweet-card-accent);
+}

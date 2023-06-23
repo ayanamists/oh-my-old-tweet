@@ -1,0 +1,29 @@
+.name {
+  font-size: 1em;
+  font-family: Inter, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  align-self: end;
+  justify-self: start;
+  text-align: start;
+  display: flex;
+  align-items: center;
+  color: var(--tweet-card-primary);
+}
+
+.clickable:hover {
+  text-decoration: underline;
+}
+
+.verifiedBadge {
+  height: 1.25em;
+  width: 1.25em;
+  margin-left: 0.2em;
+}
+
+.padlock {
+  height: 1em;
+  width: 1em;
+  margin-left: 0.2em;
+  fill: var(--tweet-card-primary);
+}

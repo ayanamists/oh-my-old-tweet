@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&display=swap');
+
+.react-tweet-card--username-in-tweet,
+.react-tweet-card--hashtag-in-tweet,
+.react-tweet-card--link-in-tweet {
+  color: var(--tweet-card-accent);
+  text-decoration: none;
+}
+
+.react-tweet-card--username-in-tweet:hover,
+.react-tweet-card--hashtag-in-tweet:hover,
+.react-tweet-card--link-in-tweet:hover {
+  text-decoration: underline;
+}

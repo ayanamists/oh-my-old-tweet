@@ -1,0 +1,18 @@
+.container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    place-content: center;
+    background: var(--tweet-card-background);
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 2em;
+    border-radius: 1.4em;
+    row-gap: 1.5em;
+    width: fit-content;
+}
+
+.fitInsideContainer {
+    width: 100%;
+    height: 100%;
+}

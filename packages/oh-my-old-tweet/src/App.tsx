@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
-import User from './User';
-import { getPosts, getPostsByUser } from './Data';
+import { getPostsByUser } from './Data';
 import { TCard } from './TCard';
-import Post from './Post';
 
 function App() {
   let [lst, setLst] = useState<JSX.Element[]>([])

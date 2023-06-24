@@ -4,7 +4,6 @@ import User from './User';
 import { getPosts, getPostsByUser } from './Data';
 import { TCard } from './TCard';
 import Post from './Post';
-import 'photoswipe/style.css'
 
 function App() {
   let [lst, setLst] = useState<JSX.Element[]>([])

@@ -1,14 +1,20 @@
 import User from "./User";
 
+interface ImageData {
+  path: string;
+  width: number;
+  height: number;
+}
+
 class Post {
     user: User;
     text: string;
-    image_urls: URL[];
+    images: ImageData[];
 
-    constructor(user: User, text: string, image_urls: URL[]) {
+    constructor(user: User, text: string, image_urls: ImageData[]) {
         this.user = user;
         this.text = text;
-        this.image_urls = image_urls;
+        this.images = image_urls;
     }
 };
 

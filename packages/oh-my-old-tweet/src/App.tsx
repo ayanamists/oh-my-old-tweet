@@ -10,13 +10,15 @@ function App() {
   let [lst, setLst] = useState<JSX.Element[]>([])
   useEffect(() => {
     const f = async () => {
-      let posts = await getPostsByUser("SakiLovesU");
-      setLst(posts.map(i => <TCard p={i} />))
+      let posts = await getPostsByUser("_iori_n");
+      setLst(posts.map(i => { 
+        return <TCard p={i} /> 
+      }))
     }
     
     f()
   }, [])
-  return (<ul>
+  return (<ul className='App'>
     {lst}
   </ul>);
 }

@@ -1,0 +1,20 @@
+.imageBackground {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+.imageDiv {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+}
+.imageData {
+  opacity: 0;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}

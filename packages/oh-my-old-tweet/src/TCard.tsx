@@ -15,6 +15,6 @@ export function TCard({ p }: { p: Post }) {
     tweet={p.text}
     time={new Date(2021, 2, 2, 21, 3)}
     source="Twitter for iPhone"
-    tweetImages={p.image_urls.map(i => { return { src: i.toString() } } )}
+    tweetImages={p.images.map(i => { return { src: i.path, width: i.width, height: i.height } } )}
   />
 }

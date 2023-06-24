@@ -7,9 +7,10 @@
     box-sizing: border-box;
     overflow: hidden;
     padding: 2em;
-    border-radius: 1.4em;
     row-gap: 1.5em;
-    width: fit-content;
+    width: 100%;
+    border: solid 1px rgb(239, 243, 244);
+    font-size: 15px;
 }
 
 .fitInsideContainer {

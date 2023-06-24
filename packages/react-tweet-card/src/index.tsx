@@ -27,6 +27,8 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
   tweet: string;
   tweetImages?: {
     src: string;
+    width: number;
+    height: number;
     isVideoThumbnail?: boolean;
   }[];
   time: Date | string;

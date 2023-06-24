@@ -1,10 +1,7 @@
 .imageContainer {
   position: relative;
   width: 100%;
-  display: flex;
-  flex-direction: row;
   max-height: 400px;
-  height: auto;
 }
 .imageContent {
   top: 0px;
@@ -16,11 +13,6 @@
   gap: 0.125rem;
   overflow: hidden;
   border-radius: 0.75rem;
-  /* opacity: 0; */
-}
-.imageBackground {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  position: relative;
+  position: absolute;
+  border: solid 1px rgb(207, 217, 222);
 }

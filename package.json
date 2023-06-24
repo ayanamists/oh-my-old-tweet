@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "cd packages/react-tweet-card && npm run build"
+    "build": "cd packages/react-tweet-card && npm run dev-build",
+    "start": "cd packages/oh-my-old-tweet && npm run start"
   },
   "keywords": [],
   "author": "",

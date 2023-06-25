@@ -55,7 +55,7 @@ export function getOnePage(cdxItem: string[]) {
 
       const mainRegion = doc.querySelector('.permalink-tweet-container');
       if (mainRegion == null) {
-        console.log(pageUrl);
+        console.warn(`[Data.ts]: unable to find the main region. url: ${pageUrl}`);
         return;
       }
 

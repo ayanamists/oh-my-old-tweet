@@ -1,12 +1,7 @@
-class User {
-  name?: string;
-
-  avatar?: URL;
-
-  constructor(name: string, avatar?: URL) {
-    this.name = name;
-    this.avatar = avatar;
-  }
+interface User {
+  fullName?: string;
+  avatar?: string;
+  userName?: string;
 }
 
 export default User;

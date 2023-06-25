@@ -5,7 +5,7 @@ export function TCard({ p }: { p: Post }) {
   if (p.text == null) {
     return null
   }
-  let name = p.user.name == null ? "" : p.user.name
+  let name = p.user.fullName ?? "";
   return <TweetCard
     author={{
       name: name,
@@ -15,6 +15,6 @@ export function TCard({ p }: { p: Post }) {
     tweet={p.text}
     time={new Date(2021, 2, 2, 21, 3)}
     source="Twitter for iPhone"
-    tweetImages={p.images.map(i => { return { src: i.path, width: i.width, height: i.height } } )}
+    tweetImages={p.images.map(i => { return { src: i } } )}
   />
 }

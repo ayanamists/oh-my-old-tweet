@@ -56,7 +56,7 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
     {
       (fail) ? null :
         (post == null)
-          ? <div style={{ height: '200px' }} className="dark: text-white">
+          ? <div style={{ height: '200px' }} className="text-black dark:text-white">
             Loading ... {`url : ${getCdxItemUrl(cdxItem)}`}
           </div>
           : <TCard p={post} />

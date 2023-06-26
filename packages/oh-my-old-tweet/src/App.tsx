@@ -36,10 +36,10 @@ function App() {
             setInputValue(evt.target.value ?? ""); }} />
       </div>
       <div className='mx-auto text-center my-4'>
-        <button className="bg-transparent hover:bg-tw-blue text-blue-700 
+        <button className="bg-transparent hover:bg-tw-blue
         font-semibold py-2 px-4 hover:text-white
-        border border-blue-500 hover:border-transparent rounded dark:border-gray-600
-        text-tw-blue dark: text-white"
+        border border-tw-blue hover:border-transparent rounded dark:border-gray-600
+        text-tw-blue dark:text-white"
           onClick={() => { setUser(mayRemoveAtSym(inputValue)) }}>
           Start
         </button>

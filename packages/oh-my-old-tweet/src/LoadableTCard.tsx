@@ -33,7 +33,8 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[]}) {
 
   useEffect(() => {
     let ignore = false;
-    if (post == null && isOnScreen) {
+    // note: if this post is reply, `fail` is true
+    if (post == null && !fail && isOnScreen) {
       getOnePage(cdxItem).then(res => {
         if (! ignore) {
           if (res == null) {
@@ -49,7 +50,7 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[]}) {
     return () => {
       ignore = true;
     }
-  }, [cdxItem, isOnScreen, post]);
+  }, [cdxItem, fail, isOnScreen, post]);
 
   return (<div ref={elementRef}>
     {

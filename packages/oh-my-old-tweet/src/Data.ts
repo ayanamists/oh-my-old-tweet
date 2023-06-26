@@ -96,6 +96,13 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
       const text = mainRegion.querySelector<HTMLElement>('div.js-tweet-text-container > p')
         ?.firstChild
         ?.textContent ?? undefined;
+      const images = extractImages(mainRegion);
+      
+      // TODO: correctly handle reply:
+      if (images.length === 0 && isReply(mainRegion)) {
+        console.log(`${pageUrl} is reply`);
+        return;
+      }
 
       return {
         user: {
@@ -104,7 +111,7 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
         },
         id: id,
         text: text,
-        images: extractImages(mainRegion),
+        images: images,
         origUrl: pageUrl
       };
     }))
@@ -146,4 +153,8 @@ function isValidImgTag(tag: HTMLImageElement) {
   } else {
     return false;
   }
+}
+
+function isReply(mainRegion: Element) {
+  return mainRegion.classList.contains("ThreadedConversation");
 }

@@ -6,7 +6,7 @@ export function TCard({ p }: { p: Post }) {
   return (<TweetCard
     author={{
       name: name,
-      username: name,
+      username: p.user.userName ?? "",
       image: ""
     }}
     tweet={p.text ?? ""}

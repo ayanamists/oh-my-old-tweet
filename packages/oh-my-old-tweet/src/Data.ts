@@ -92,7 +92,7 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
       }
 
       const name = getOneElementByClassName(mainRegion, 'fullname')?.textContent ?? undefined;
-      const userName = getOneElementByClassName(mainRegion, 'username')?.textContent ?? undefined;
+      const userName = mainRegion.querySelector('.username > b')?.textContent ?? undefined;
       const text = mainRegion.querySelector<HTMLElement>('div.js-tweet-text-container > p')
         ?.firstChild
         ?.textContent ?? undefined;

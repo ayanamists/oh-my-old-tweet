@@ -35,7 +35,6 @@ function TweetImageItemInternal({ url, width, height } :
   );
 }
 
-// eslint-disable-next-line react/prop-types, no-unused-vars
 export default function TweetImageItem({ url } : { url : string}) {
   const [loaded, setLoaded] = useState(false);
   const [width2, setWidth] = useState(0);
@@ -48,7 +47,7 @@ export default function TweetImageItem({ url } : { url : string}) {
 
   if (!loaded) {
     // eslint-disable-next-line jsx-a11y/alt-text
-    return <img src={url} onLoad={onLoad} />;
+    return <img src={url} onLoad={onLoad} style={{ opacity: 0 }} />;
   }
   return <TweetImageItemInternal url={url} width={width2} height={height2} />;
 }

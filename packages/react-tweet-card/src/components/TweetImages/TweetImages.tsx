@@ -28,13 +28,13 @@ const TweetImages = ({ tweetImages = [] }: TweetImagesProps) => {
           {tweetImages.map((i, index) => {
             if (index === 0 && count === 3) {
               return (
-                <div style={{ gridRow: '1 / span 2' }}>
+                <div style={{ gridRow: '1 / span 2' }} key={i.src}>
                   <TweetImageItem url={i.src} />
                 </div>
               );
             }
             return (
-              <div>
+              <div key={i.src}>
                 <TweetImageItem url={i.src} />
               </div>
             );

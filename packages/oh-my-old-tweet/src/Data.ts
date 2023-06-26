@@ -1,3 +1,4 @@
+import Post from "./Post";
 import getUrl from "./corsUrl";
 
 // only for debugging
@@ -36,6 +37,35 @@ import getUrl from "./corsUrl";
 // })
 // }
 
+export function filterUniqueCdxItems(cdxItems: string[][]) {
+  const idSet = new Set<String>();
+  const res: string[][] = [];
+  cdxItems.forEach((i) => {
+    const id = getCdxItemId(i);
+    if (! idSet.has(id) && isValidCdxItem(i)) {
+      res.push(i);
+      idSet.add(id);
+    }
+  })
+  return res;
+}
+
+function isValidCdxItem(cdxItem: string[]) {
+  const url = getCdxItemUrl(cdxItem);
+  return url.split('/').includes('status');
+}
+
+export function getCdxItemUrl(cdxItem: string[]) {
+  return cdxItem[2];
+}
+
+export function getCdxItemId(cdxItem: string[]) {
+  const origUrl = getCdxItemUrl(cdxItem);
+  const splitted = origUrl.split('/');
+  const id = splitted[splitted.length - 1];
+  return id;
+}
+
 export function getCdxList(user: string) {
   const req = `twitter.com/${user}/`
   return fetch(getUrl(`https://web.archive.org/cdx/search/cdx?url=${req}&matchType=prefix&output=json`))
@@ -43,9 +73,11 @@ export function getCdxList(user: string) {
     .then(j => j as string[][]);
 }
 
-export function getOnePage(cdxItem: string[]) {
+
+export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
   const timeStamp = cdxItem[1];
-  const origUrl = cdxItem[2];
+  const origUrl = getCdxItemUrl(cdxItem);
+  const id = getCdxItemId(cdxItem);
   const pageUrl = `https://web.archive.org/web/${timeStamp}/${origUrl}`;
   return fetch(getUrl(pageUrl))
     .then((res => res.text()))
@@ -70,11 +102,16 @@ export function getOnePage(cdxItem: string[]) {
           userName: userName,
           fullName: name,
         },
+        id: id,
         text: text,
         images: extractImages(mainRegion),
         origUrl: pageUrl
       };
     }))
+    .catch(() => {
+      console.log(`fail to load ${pageUrl}`);
+      return undefined;
+    });
 }
 
 function getOneElementByClassName(doc: Element, name: string) {

@@ -42,7 +42,7 @@ export function filterUniqueCdxItems(cdxItems: string[][]) {
   const res: string[][] = [];
   cdxItems.forEach((i) => {
     const id = getCdxItemId(i);
-    if (! idSet.has(id) && isValidCdxItem(i)) {
+    if (!idSet.has(id) && isValidCdxItem(i)) {
       res.push(i);
       idSet.add(id);
     }
@@ -86,39 +86,93 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
       const doc = parser.parseFromString(res, 'text/html');
 
       const mainRegion = doc.querySelector('.permalink-tweet-container');
-      if (mainRegion == null) {
-        console.warn(`[Data.ts]: unable to find the main region. url: ${pageUrl}`);
-        return;
+      if (mainRegion != null) {
+        return extractFromMainRegion(mainRegion, id, pageUrl);
+      } else {
+        const metaTag = findMetaTag(doc, id);
+        if (metaTag != null) {
+          return extractFromMetaTag(metaTag, id, pageUrl);
+        } else {
+          console.warn(`[Data.ts]: Cannot find possible extraction method. url: ${pageUrl}`);
+          return;
+        }
       }
-
-      const name = getOneElementByClassName(mainRegion, 'fullname')?.textContent ?? undefined;
-      const userName = mainRegion.querySelector('.username > b')?.textContent ?? undefined;
-      const text = mainRegion.querySelector<HTMLElement>('div.js-tweet-text-container > p')
-        ?.firstChild
-        ?.textContent ?? undefined;
-      const images = extractImages(mainRegion);
-      
-      // TODO: correctly handle reply:
-      if (images.length === 0 && isReply(mainRegion)) {
-        console.log(`${pageUrl} is reply`);
-        return;
-      }
-
-      return {
-        user: {
-          userName: userName,
-          fullName: name,
-        },
-        id: id,
-        text: text,
-        images: images,
-        origUrl: pageUrl
-      };
     }))
     .catch(() => {
       console.log(`fail to load ${pageUrl}`);
       return undefined;
     });
+}
+
+function findMetaTag(doc: Document, id: string) {
+  let eles = doc.querySelectorAll(`meta[content="${id}"]`)
+  let target = null;
+  eles.forEach((i) => {
+    const parentElement = i.parentElement;
+    if (parentElement == null) {
+      return;
+    }
+    
+    if (parentElement.tagName.toLowerCase() === "div" 
+      && parentElement.getAttribute("itemprop") === "hasPart") {
+      target = i;
+    }
+  })
+  return target;
+}
+
+function extractFromMetaTag(metaTag: Element, id: string, pageUrl: string): Post | undefined {
+  const div = metaTag.parentElement;
+  if (div == null) {
+    return;
+  }
+  const article = div.getElementsByTagName('article');
+  if (article.length !== 1) {
+    console.warn(`[Data.ts] During extraction, multiple article. url: ${pageUrl}`);
+  }
+  const data = article[0];
+  const aRoleLinks = data.querySelectorAll('a[role="link"]');
+  const userName = mayRemoveAtSym(aRoleLinks[2].textContent ?? undefined);
+  const fullName = aRoleLinks[1].textContent ?? undefined;
+  const text = data.querySelector('div[data-testid="tweetText"]')?.textContent ?? undefined;
+  const images = extractImages(data);
+
+  return {
+    user: {
+      userName: userName,
+      fullName: fullName
+    },
+    id: id,
+    text: text,
+    images: images,
+    origUrl: pageUrl
+  }
+}
+
+function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string) {
+  const name = getOneElementByClassName(mainRegion, 'fullname')?.textContent ?? undefined;
+  const userName = mainRegion.querySelector('.username > b')?.textContent ?? undefined;
+  const text = mainRegion.querySelector<HTMLElement>('div.js-tweet-text-container > p')
+    ?.firstChild
+    ?.textContent ?? undefined;
+  const images = extractImages(mainRegion);
+
+  // TODO: correctly handle reply:
+  if (images.length === 0 && isReply(mainRegion)) {
+    console.log(`${pageUrl} is reply`);
+    return;
+  }
+
+  return {
+    user: {
+      userName: userName,
+      fullName: name,
+    },
+    id: id,
+    text: text,
+    images: images,
+    origUrl: pageUrl
+  };
 }
 
 function getOneElementByClassName(doc: Element, name: string) {
@@ -147,8 +201,7 @@ function isValidImgTag(tag: HTMLImageElement) {
     const src = tag.src;
     const splitted = src.split('/');
     const last = splitted[splitted.length - 1];
-    const preLast = splitted[splitted.length - 2];
-    return !last.match('deleted') && !preLast.match('profile') 
+    return !last.match('deleted') && !splitted.some(i => i.match('profile'))
       && !splitted.includes('emoji');
   } else {
     return false;
@@ -157,4 +210,12 @@ function isValidImgTag(tag: HTMLImageElement) {
 
 function isReply(mainRegion: Element) {
   return mainRegion.classList.contains("ThreadedConversation");
+}
+
+export function mayRemoveAtSym(str: string | undefined) {
+  if (str?.charAt(0) === '@') {
+    return str.substring(1, str.length);
+  } else {
+    return str;
+  }
 }

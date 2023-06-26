@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import './App.css';
 import { Timeline } from './Timeline';
+import { mayRemoveAtSym } from './Data';
 
 function MarkBox({ text } : { text: string }) {
   return <mark className="px-2 text-white bg-tw-blue text-white rounded">{text}</mark>
@@ -37,7 +38,7 @@ function App() {
         <button className="bg-transparent hover:bg-tw-blue text-blue-700 
         font-semibold py-2 px-4 hover:text-white
         border border-blue-500 hover:border-transparent rounded"
-          onClick={() => { setUser(inputValue) }}>
+          onClick={() => { setUser(mayRemoveAtSym(inputValue)) }}>
           Start
         </button>
       </div>

@@ -11,7 +11,8 @@ function App() {
   const [user, setUser] = useState<string>();
   const [inputValue, setInputValue] = useState<string>("_iori_n");
 
-  return (user == null) ?
+  return (<div className='bg-white dark:bg-black'>
+  {(user == null) ?
     (<div className='flex items-center justify-center h-screen flex-col'>
       <div className='mx-auto max-w-screen-sm text-center'>
         <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl">
@@ -37,13 +38,15 @@ function App() {
       <div className='mx-auto text-center my-4'>
         <button className="bg-transparent hover:bg-tw-blue text-blue-700 
         font-semibold py-2 px-4 hover:text-white
-        border border-blue-500 hover:border-transparent rounded"
+        border border-blue-500 hover:border-transparent rounded dark:border-gray-600
+        text-tw-blue dark: text-white"
           onClick={() => { setUser(mayRemoveAtSym(inputValue)) }}>
           Start
         </button>
       </div>
     </div>)
-    : <Timeline user={user} />
+    : <Timeline user={user} />}
+    </div>)
 }
 
 export default App;

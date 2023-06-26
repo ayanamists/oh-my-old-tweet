@@ -24,10 +24,12 @@ export function getCdxItemUrl(cdxItem: string[]) {
 }
 
 export function getCdxItemId(cdxItem: string[]) {
+  // TODO: use real url library for this
   const origUrl = getCdxItemUrl(cdxItem);
   const splitted = origUrl.split('/');
-  const id = splitted[splitted.length - 1];
-  return id;
+  const preId = splitted[splitted.length - 1];
+  const splitted2 = preId.split('?');
+  return splitted2[0];
 }
 
 export function getCdxList(user: string) {

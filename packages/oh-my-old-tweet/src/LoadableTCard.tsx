@@ -24,7 +24,7 @@ function useOnScreen(ref: RefObject<HTMLElement>) {
   return isOnScreen;
 }
 
-export function LoadableTCard({ cdxItem }: { cdxItem: string[]}) {
+export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
   const [post, setPost] = useState<Post>();
   const [fail, setFail] = useState(false);
 
@@ -36,7 +36,7 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[]}) {
     // note: if this post is reply, `fail` is true
     if (post == null && !fail && isOnScreen) {
       getOnePage(cdxItem).then(res => {
-        if (! ignore) {
+        if (!ignore) {
           if (res == null) {
             setFail(true);
           } else {
@@ -55,8 +55,11 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[]}) {
   return (<div ref={elementRef}>
     {
       (fail) ? null :
-      (post == null) ? 
-        <div style={{ height: '200px' }}>Loading ... {`url : ${getCdxItemUrl(cdxItem)}`}</div> : <TCard p={post} />
+        (post == null)
+          ? <div style={{ height: '200px' }} className="dark: text-white">
+            Loading ... {`url : ${getCdxItemUrl(cdxItem)}`}
+          </div>
+          : <TCard p={post} />
     }
   </div>);
 }

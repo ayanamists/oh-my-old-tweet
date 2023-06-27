@@ -1,5 +1,5 @@
 import { RefObject, useEffect, useRef, useState } from "react";
-import { getCdxItemUrl, getOnePage } from "./Data";
+import { getCdxItemId, getCdxItemUrl, getOnePage } from "./Data";
 import Post from "./Post";
 import { TCard } from "./TCard";
 
@@ -52,12 +52,19 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
     }
   }, [cdxItem, fail, isOnScreen, post]);
 
+  const pageUrl = getCdxItemUrl(cdxItem);
   return (<div ref={elementRef}>
     {
       (fail) ? null :
         (post == null)
-          ? <div style={{ height: '200px' }} className="text-black dark:text-white">
-            Loading ... {`url : ${getCdxItemUrl(cdxItem)}`}
+          ? <div style={{ height: '200px' }} 
+            className="text-black dark:text-white text-center">
+            Loading ... 
+            <a href={pageUrl} 
+              className="text-tw-blue underline dark:text-blue-500 hover:no-underline"
+              target="_blank" rel="noopener noreferrer">
+              Tweet id: {getCdxItemId(cdxItem)}
+            </a>
           </div>
           : <TCard p={post} />
     }

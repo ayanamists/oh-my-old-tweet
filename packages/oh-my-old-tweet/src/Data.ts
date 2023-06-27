@@ -78,8 +78,8 @@ function findMetaTag(doc: Document, id: string) {
     if (parentElement == null) {
       return;
     }
-    
-    if (parentElement.tagName.toLowerCase() === "div" 
+
+    if (parentElement.tagName.toLowerCase() === "div"
       && parentElement.getAttribute("itemprop") === "hasPart") {
       target = i;
     }
@@ -155,7 +155,7 @@ function extractImages(mainRegion: Element) {
   const urls = [];
   for (let i = 0; i < images.length; ++i) {
     if (isValidImgTag(images[i])) {
-      urls.push(images[i].src);
+      urls.push(toHttps(images[i].src));
     }
   }
   return urls;
@@ -176,6 +176,14 @@ function isValidImgTag(tag: HTMLImageElement) {
 
 function isReply(mainRegion: Element) {
   return mainRegion.classList.contains("ThreadedConversation");
+}
+
+function toHttps(url: string) {
+  const urlObj = new URL(url);
+  if (urlObj.protocol === 'http:') {
+    urlObj.protocol = 'https:';
+  }
+  return urlObj.toString();
 }
 
 export function mayRemoveAtSym(str: string | undefined) {

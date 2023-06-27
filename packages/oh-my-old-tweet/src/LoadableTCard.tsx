@@ -58,7 +58,7 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
       (fail) ? null :
         (post == null)
           ? <div style={{ height: '200px' }} 
-            className="text-black dark:text-white text-center">
+            className="text-black dark:text-white text-center flex flex-col item-center justify-center">
             Loading ... 
             <a href={pageUrl} 
               className="text-tw-blue underline dark:text-blue-500 hover:no-underline"

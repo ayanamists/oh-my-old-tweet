@@ -40,7 +40,7 @@ function App() {
         font-semibold py-2 px-4 hover:text-white
         border border-tw-blue hover:border-transparent rounded dark:border-gray-600
         text-tw-blue dark:text-white"
-          onClick={() => { setUser(mayRemoveAtSym(inputValue)) }}>
+          onClick={() => { setUser(mayRemoveAtSym(inputValue)?.trim()) }}>
           Start
         </button>
       </div>

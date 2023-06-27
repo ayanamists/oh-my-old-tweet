@@ -11,7 +11,7 @@ const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void)
     const item = localStorage.getItem(id);
     if (item != null) {
       const cachedData = JSON.parse(item);
-      setData(cachedData.data);
+      setData(cachedData.data ?? false);
     } else {
       (async () => {
         await sema.acquire();

@@ -46,6 +46,12 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
   const id = getCdxItemId(cdxItem);
   const pageUrl = `https://web.archive.org/web/${timeStamp}/${origUrl}`;
   return fetch(getUrl(pageUrl))
+    .then(res => {
+      if (!res.ok) {
+        throw Error(res.statusText);
+      }
+      return res;
+    })
     .then((res => res.text()))
     .then((res => {
       const parser = new DOMParser();
@@ -63,11 +69,7 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
           return;
         }
       }
-    }))
-    .catch(() => {
-      console.log(`fail to load ${pageUrl}`);
-      return undefined;
-    });
+    }));
 }
 
 function findMetaTag(doc: Document, id: string) {

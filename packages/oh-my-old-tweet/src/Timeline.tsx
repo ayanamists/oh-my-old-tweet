@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { filterUniqueCdxItems, getCdxItemId, getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
+import SemaContext from "./SemaContext";
+import { Sema } from "async-sema";
 
 function LoadingCircle() {
   return (
@@ -28,7 +30,9 @@ export function Timeline({ user }: { user: string }) {
   }, [user]);
 
   return (lst == null ? <LoadingCircle /> :
-  <ul className='App dark:bg-black'>
-    {lst}
-  </ul>);
+    <SemaContext.Provider value={new Sema(5)}>
+      <ul className='App dark:bg-black'>
+        {lst}
+      </ul>
+    </SemaContext.Provider>);
 }

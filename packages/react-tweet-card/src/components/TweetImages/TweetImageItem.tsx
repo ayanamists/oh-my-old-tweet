@@ -2,6 +2,7 @@ import React, { RefObject, useCallback, useState } from 'react';
 import className from 'utils/className';
 import globalClassName from 'utils/globalClassName';
 import { Item } from 'react-photoswipe-gallery';
+import fullFillImage from 'utils/fullFillImage';
 import css from './TweetImageItem.module.css';
 
 function TweetImageItemInternal({ url, width, height } :
@@ -41,8 +42,9 @@ export default function TweetImageItem({ url } : { url : string}) {
   const [height2, setHeight] = useState(0);
   const onLoad = useCallback((i : any) => {
     setLoaded(true);
-    setWidth(i.target.width);
-    setHeight(i.target.height);
+    const [width, height] = fullFillImage(i.target.width, i.target.height);
+    setWidth(width);
+    setHeight(height);
   }, []);
 
   if (!loaded) {

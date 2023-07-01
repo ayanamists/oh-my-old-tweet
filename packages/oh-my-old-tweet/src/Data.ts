@@ -59,11 +59,11 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
 
       const mainRegion = doc.querySelector('.permalink-tweet-container');
       if (mainRegion != null) {
-        return extractFromMainRegion(mainRegion, id, pageUrl);
+        return extractFromMainRegion(mainRegion, id, pageUrl, origUrl);
       } else {
         const metaTag = findMetaTag(doc, id);
         if (metaTag != null) {
-          return extractFromMetaTag(metaTag, id, pageUrl);
+          return extractFromMetaTag(metaTag, id, pageUrl, origUrl);
         } else {
           console.warn(`[Data.ts]: Cannot find possible extraction method. url: ${pageUrl}`);
           return;
@@ -89,7 +89,7 @@ function findMetaTag(doc: Document, id: string) {
   return target;
 }
 
-function extractFromMetaTag(metaTag: Element, id: string, pageUrl: string): Post | undefined {
+function extractFromMetaTag(metaTag: Element, id: string, pageUrl: string, tweetUrl: string): Post | undefined {
   const div = metaTag.parentElement;
   if (div == null) {
     return;
@@ -113,11 +113,12 @@ function extractFromMetaTag(metaTag: Element, id: string, pageUrl: string): Post
     id: id,
     text: text,
     images: images,
-    origUrl: pageUrl
+    archiveUrl: pageUrl,
+    tweetUrl: tweetUrl
   }
 }
 
-function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string) {
+function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string, tweetUrl: string) {
   const name = getOneElementByClassName(mainRegion, 'fullname')?.textContent ?? undefined;
   const userName = mainRegion.querySelector('.username > b')?.textContent ?? undefined;
   const text = mainRegion.querySelector<HTMLElement>('div.js-tweet-text-container > p')
@@ -139,7 +140,8 @@ function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string)
     id: id,
     text: text,
     images: images,
-    origUrl: pageUrl
+    archiveUrl: pageUrl,
+    tweetUrl: tweetUrl 
   };
 }
 

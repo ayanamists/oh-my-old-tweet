@@ -5,7 +5,8 @@ interface Post {
   id: string;
   text?: string;
   images: string[];
-  origUrl: string;
+  tweetUrl: string;
+  archiveUrl: string;
 }
 
 export default Post;

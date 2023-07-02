@@ -3,6 +3,7 @@ import { filterUniqueCdxItems, getCdxItemId, getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import SemaContext from "./SemaContext";
 import { Sema } from "async-sema";
+import Empty from "./Empty";
 
 function LoadingCircle() {
   return (
@@ -30,9 +31,12 @@ export function Timeline({ user }: { user: string }) {
   }, [user]);
 
   return (lst == null ? <LoadingCircle /> :
-    <SemaContext.Provider value={new Sema(5)}>
-      <ul className='App dark:bg-black'>
-        {lst}
-      </ul>
-    </SemaContext.Provider>);
+    (lst.length === 0) ? <Empty username={user} /> :
+      <SemaContext.Provider value={new Sema(5)}>
+        <div className="min-h-screen">
+          <ul className='App dark:bg-black'>
+            {lst}
+          </ul>
+        </div>
+      </SemaContext.Provider>);
 }

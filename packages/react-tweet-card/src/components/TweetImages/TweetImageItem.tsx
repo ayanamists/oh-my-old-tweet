@@ -1,4 +1,4 @@
-import React, { RefObject, useCallback, useState } from 'react';
+import React, { MutableRefObject, useCallback, useState } from 'react';
 import className from 'utils/className';
 import globalClassName from 'utils/globalClassName';
 import { Item } from 'react-photoswipe-gallery';
@@ -15,6 +15,7 @@ function TweetImageItemInternal({ url, width, height } :
       <div {...className(globalClassName('imageDiv'), css.imageDiv)}> </div>
       <div {...className(globalClassName('temp'), css.imageData)}>
         <Item
+          cropped
           original={url}
           thumbnail={url}
           width={width.toString()}
@@ -24,7 +25,7 @@ function TweetImageItemInternal({ url, width, height } :
             // eslint-disable-next-line max-len
             // eslint-disable-next-line jsx-a11y/alt-text, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
             <img
-              ref={ref as RefObject<HTMLImageElement>}
+              ref={ref as MutableRefObject<HTMLImageElement>}
               onClick={open}
               src={url}
               style={{ height: '100%', width: '100%' }}
@@ -42,7 +43,9 @@ export default function TweetImageItem({ url } : { url : string}) {
   const [height2, setHeight] = useState(0);
   const onLoad = useCallback((i : any) => {
     setLoaded(true);
-    const [width, height] = fullFillImage(i.target.width, i.target.height);
+    const targetHeight = i.target.height;
+    const targetWidth = i.target.width;
+    const [width, height] = fullFillImage(targetWidth, targetHeight);
     setWidth(width);
     setHeight(height);
   }, []);

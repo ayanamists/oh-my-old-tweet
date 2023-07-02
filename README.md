@@ -1,11 +1,13 @@
 # Oh My Old Tweet
 
-A graceful, powerful and easy-to-use tool to see old (including **deleted**) tweets.
+A graceful, powerful and easy-to-use tool to see old (including **deleted**) tweets. 
+
+![Github Pages](https://github.com/ayanamists/oh-my-old-tweet/actions/workflows/pages.yaml/badge.svg?event=push)
 
 ## How to use it
 
-1. visit our [github pages](https://omot.ayayaya.cc)
-2. fill the input box with username you want to query
+1. Visit our [site](https://omot.ayayaya.org)
+2. Fill the input box with username you want to query
 3. Click `Start`
 4. Enjoy
 

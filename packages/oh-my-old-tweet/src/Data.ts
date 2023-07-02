@@ -121,9 +121,9 @@ function extractFromMetaTag(metaTag: Element, id: string, pageUrl: string, tweet
 function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string, tweetUrl: string) {
   const name = getOneElementByClassName(mainRegion, 'fullname')?.textContent ?? undefined;
   const userName = mainRegion.querySelector('.username > b')?.textContent ?? undefined;
-  const text = mainRegion.querySelector<HTMLElement>('div.js-tweet-text-container > p')
-    ?.firstChild
-    ?.textContent ?? undefined;
+  const textRegion = mainRegion
+    .querySelector<HTMLElement>('div.js-tweet-text-container > p')
+  const text = textRegion == null ? undefined : extractText(textRegion);
   const images = extractImages(mainRegion);
 
   // TODO: correctly handle reply:
@@ -141,8 +141,34 @@ function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string,
     text: text,
     images: images,
     archiveUrl: pageUrl,
-    tweetUrl: tweetUrl 
+    tweetUrl: tweetUrl
   };
+}
+
+function extractText(textRegion: Element) {
+  let res = "";
+  const nodes = textRegion.childNodes;
+  for (let node in nodes) {
+    res += extractOneTag(nodes[node]);
+  }
+  return res;
+}
+
+function extractOneTag(tag: ChildNode) {
+  if (tag.nodeName === "#text") {
+    return tag.textContent;
+  } else if (tag.nodeName === "A") {
+    const nodeA = tag as HTMLAnchorElement;
+    if (nodeA.classList.contains('twitter-hashtag')) {
+      return nodeA.textContent + " ";
+    }
+  } else if (tag.nodeName === "IMG") {
+    const nodeImg = tag as HTMLImageElement;
+    if (nodeImg.classList.contains('Emoji')) {
+      return nodeImg.alt;
+    }
+  }
+  return "";
 }
 
 function getOneElementByClassName(doc: Element, name: string) {

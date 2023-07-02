@@ -6,6 +6,7 @@ import Container from 'components/Container';
 import TwitterLogo from 'components/TwitterLogo';
 import Engagement from 'components/Engagement';
 import TweetImages from 'components/TweetImages';
+import ArchiveLogo from 'components/ArchiveLogo';
 import { ThemeOption, TweetCardColors } from './themes';
 import './index.css';
 
@@ -32,6 +33,7 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
   time: Date | string;
   source?: string;
   permalink?: string;
+  archiveLink?: string;
   clickableProfileLink?: boolean;
   theme?: ThemeOption;
   colors?: TweetCardColors;
@@ -55,11 +57,15 @@ const TweetCard = ({
   showEngagement = true,
   emojis,
   tweetImages,
+  archiveLink,
   ...rest
 }: TweetCardProps) => (
   <Container {...{ ...rest }}>
     <UserDetails {...{ ...author, clickableProfileLink }} />
-    <TwitterLogo {...{ permalink }} />
+    <div>
+      <TwitterLogo {...{ permalink }} />
+      { archiveLink && <ArchiveLogo {...{ ...rest, archiveLink }} /> }
+    </div>
     <Tweet {...{ tweet }} />
     {tweetImages?.length && <TweetImages {...{ tweetImages }} />}
     {showDetails && <Details {...{ time, source, permalink }} />}

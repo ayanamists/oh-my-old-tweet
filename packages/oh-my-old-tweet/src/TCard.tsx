@@ -14,5 +14,6 @@ export function TCard({ p }: { p: Post }) {
     source="Twitter for iPhone"
     tweetImages={p.images.map(i => { return { src: i } })}
     permalink={p.tweetUrl}
+    archiveLink={p.archiveUrl}
   />);
 }

@@ -11,6 +11,8 @@ function App() {
   const [user, setUser] = useState<string>();
   const [inputValue, setInputValue] = useState<string>("_iori_n");
 
+  const handleStart = () => { setUser(mayRemoveAtSym(inputValue)?.trim()) };
+
   return (<div className='bg-white dark:bg-black'>
   {(user == null) ?
     (<div className='flex items-center justify-center h-screen flex-col'>
@@ -33,14 +35,20 @@ function App() {
           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder={inputValue}
           onChange={(evt) => { 
-            setInputValue(evt.target.value ?? ""); }} />
+            setInputValue(evt.target.value ?? ""); }} 
+          onKeyDown={(evt) => {
+            if (evt.key === 'Enter') {
+              handleStart();
+            }
+          }}
+        />
       </div>
       <div className='mx-auto text-center my-4'>
         <button className="bg-transparent hover:bg-tw-blue
         font-semibold py-2 px-4 hover:text-white
         border border-tw-blue hover:border-transparent rounded dark:border-gray-600
         text-tw-blue dark:text-white"
-          onClick={() => { setUser(mayRemoveAtSym(inputValue)?.trim()) }}>
+          onClick={handleStart}>
           Start
         </button>
       </div>

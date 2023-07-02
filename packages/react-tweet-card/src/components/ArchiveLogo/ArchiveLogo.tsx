@@ -1,9 +1,6 @@
 import useTheme from 'hooks/useTheme';
 import { TweetCardProps } from 'index';
 import React, { HTMLAttributes } from 'react';
-import className from 'utils/className';
-import globalClassName from 'utils/globalClassName';
-import css from './ArchiveLogo.module.css';
 
 type ArchiveLogoProps = HTMLAttributes<HTMLDivElement> & {
   className?: string;
@@ -24,7 +21,7 @@ function ArchiveLogo({
   const theme = useTheme(rest.theme);
   const fillColor = theme === 'dark' ? 'white' : 'black';
   return (
-    <div {...className(globalClassName('alogo'), css.alogo)}>
+    <div>
       <a href={archiveLink} target="_blank" rel="noreferrer" title="View on archive.org">
         <svg className="ia-logo" width="1.5rem" height="1.5rem" viewBox="0 0 27 30" xmlns="http://www.w3.org/2000/svg" aria-labelledby="logoTitleID logoDescID">
           <g stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">

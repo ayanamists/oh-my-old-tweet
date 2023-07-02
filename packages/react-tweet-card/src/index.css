@@ -12,3 +12,8 @@
 .react-tweet-card--link-in-tweet:hover {
   text-decoration: underline;
 }
+
+.icons {
+  display: flex;
+  gap: 0.5rem;
+}

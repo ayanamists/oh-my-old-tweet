@@ -1,5 +1,4 @@
 import React, { useRef, useMemo, HTMLAttributes } from 'react';
-import useTwitterLogo from 'hooks/useTwitterLogo';
 import classNameUtil from 'utils/className';
 import './Container.css';
 import getCSSVariables from 'utils/getCSSVariables';
@@ -33,7 +32,7 @@ const Container = ({
   ...rest
 }: ContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const twitterLogo = useTwitterLogo(containerRef);
+  const twitterLogo = true;
   // useFontSize(fitInsideContainer, containerRef);
 
   const theme = useTheme(rest.theme);

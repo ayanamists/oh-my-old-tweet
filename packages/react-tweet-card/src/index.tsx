@@ -62,7 +62,7 @@ const TweetCard = ({
 }: TweetCardProps) => (
   <Container {...{ ...rest }}>
     <UserDetails {...{ ...author, clickableProfileLink }} />
-    <div>
+    <div className="icons">
       <TwitterLogo {...{ permalink }} />
       { archiveLink && <ArchiveLogo {...{ ...rest, archiveLink }} /> }
     </div>

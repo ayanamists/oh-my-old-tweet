@@ -1,6 +1,13 @@
 import Post from "./Post";
 import getUrl from "./corsUrl";
 
+interface TweetInfo {
+  lang: string;
+  id: string;
+  pageUrl: string;
+  tweetUrl: string;
+};
+
 export function filterUniqueCdxItems(cdxItems: string[][]) {
   const idSet = new Set<String>();
   const res: string[][] = [];
@@ -57,13 +64,21 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
       const parser = new DOMParser();
       const doc = parser.parseFromString(res, 'text/html');
 
+      const lang = doc.getElementsByTagName('html')[0].getAttribute('lang') ?? "en";
       const mainRegion = doc.querySelector('.permalink-tweet-container');
+      const info = {
+        id: id,
+        pageUrl: pageUrl,
+        tweetUrl: origUrl,
+        lang: lang
+      };
+
       if (mainRegion != null) {
-        return extractFromMainRegion(mainRegion, id, pageUrl, origUrl);
+        return extractFromMainRegion(mainRegion, info);
       } else {
         const metaTag = findMetaTag(doc, id);
         if (metaTag != null) {
-          return extractFromMetaTag(metaTag, id, pageUrl, origUrl);
+          return extractFromMetaTag(metaTag, info);
         } else {
           console.warn(`[Data.ts]: Cannot find possible extraction method. url: ${pageUrl}`);
           return;
@@ -89,14 +104,14 @@ function findMetaTag(doc: Document, id: string) {
   return target;
 }
 
-function extractFromMetaTag(metaTag: Element, id: string, pageUrl: string, tweetUrl: string): Post | undefined {
+function extractFromMetaTag(metaTag: Element, info: TweetInfo): Post | undefined {
   const div = metaTag.parentElement;
   if (div == null) {
     return;
   }
   const article = div.getElementsByTagName('article');
   if (article.length !== 1) {
-    console.warn(`[Data.ts] During extraction, multiple article. url: ${pageUrl}`);
+    console.warn(`[Data.ts] During extraction, multiple article. url: ${info.pageUrl}`);
   }
   const data = article[0];
   const aRoleLinks = data.querySelectorAll('a[role="link"]');
@@ -104,31 +119,42 @@ function extractFromMetaTag(metaTag: Element, id: string, pageUrl: string, tweet
   const fullName = aRoleLinks[1].textContent ?? undefined;
   const text = data.querySelector('div[data-testid="tweetText"]')?.textContent ?? undefined;
   const images = extractImages(data);
+  const timeMeta = div.querySelector('meta[itemprop="datePublished"]')?.getAttribute('content');
+  const time = new Date(timeMeta ?? 0);
+  const avatarRegion = div.querySelector('div[data-testid="Tweet-User-Avatar"]');
+  const avatar = filterValidAvatar(avatarRegion?.querySelector('img')?.getAttribute('src'));
 
   return {
     user: {
       userName: userName,
-      fullName: fullName
+      fullName: fullName,
+      avatar: avatar
     },
-    id: id,
+    id: info.id,
     text: text,
     images: images,
-    archiveUrl: pageUrl,
-    tweetUrl: tweetUrl
+    archiveUrl: info.pageUrl,
+    tweetUrl: info.tweetUrl,
+    date: time
   }
 }
 
-function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string, tweetUrl: string) {
+function extractFromMainRegion(mainRegion: Element, info: TweetInfo): Post | undefined {
   const name = getOneElementByClassName(mainRegion, 'fullname')?.textContent ?? undefined;
   const userName = mainRegion.querySelector('.username > b')?.textContent ?? undefined;
+  const timeMsStr = mainRegion.querySelector('._timestamp')?.getAttribute('data-time-ms');
+  const time = new Date(parseInt(timeMsStr ?? "0"));
   const textRegion = mainRegion
     .querySelector<HTMLElement>('div.js-tweet-text-container > p')
   const text = textRegion == null ? undefined : extractText(textRegion);
   const images = extractImages(mainRegion);
 
+  const avatarRegion = mainRegion.querySelector('img.avatar');
+  const avatar = filterValidAvatar(avatarRegion?.getAttribute('src'));
+
   // TODO: correctly handle reply:
   if (images.length === 0 && isReply(mainRegion)) {
-    console.log(`${pageUrl} is reply`);
+    console.log(`${info.pageUrl} is reply`);
     return;
   }
 
@@ -136,12 +162,14 @@ function extractFromMainRegion(mainRegion: Element, id: string, pageUrl: string,
     user: {
       userName: userName,
       fullName: name,
+      avatar: avatar
     },
-    id: id,
+    id: info.id,
     text: text,
     images: images,
-    archiveUrl: pageUrl,
-    tweetUrl: tweetUrl
+    archiveUrl: info.pageUrl,
+    tweetUrl: info.tweetUrl,
+    date: time
   };
 }
 
@@ -201,6 +229,18 @@ function isValidImgTag(tag: HTMLImageElement) {
       && !splitted.includes('emoji');
   } else {
     return false;
+  }
+}
+
+function filterValidAvatar(url: string | undefined | null) {
+  if (url == null) {
+    return undefined;
+  } else {
+    if (url.split('/').some(i => i.match('deleted'))) {
+      return undefined;
+    } else {
+      return url;
+    }
   }
 }
 

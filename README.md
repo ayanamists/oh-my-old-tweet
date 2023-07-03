@@ -24,9 +24,10 @@ A graceful, powerful and easy-to-use tool to see old (including **deleted**) twe
 
 ## To-do List
 
-- [ ] Date and engagement info
+- [x] Date
+- [ ] Engagement info
 - [ ] Profile image and content
-- [ ] User avatar
+- [x] User avatar
 - [ ] Retweets
 - [ ] Replies
 - [ ] Paging (Test with Donald Trump's data)

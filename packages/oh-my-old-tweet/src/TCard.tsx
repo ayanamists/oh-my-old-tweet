@@ -7,10 +7,10 @@ export function TCard({ p }: { p: Post }) {
     author={{
       name: name,
       username: p.user.userName ?? "",
-      image: ""
+      image: p.user.avatar ?? ""
     }}
     tweet={p.text ?? ""}
-    time={new Date(2021, 2, 2, 21, 3)}
+    time={p.date}
     source="Twitter for iPhone"
     tweetImages={p.images.map(i => { return { src: i } })}
     permalink={p.tweetUrl}

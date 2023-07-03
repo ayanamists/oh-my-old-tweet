@@ -3,6 +3,19 @@ import SemaContext from "./SemaContext";
 import Post from "./Post";
 import { getCdxItemId, getCdxItemUrl, getOnePage } from "./Data";
 
+function parseStorageItem(str: string): Post | boolean {
+  const data = JSON.parse(str);
+  if (data.data == null) {
+    return false;
+  }
+  const post = data.data as Post;
+  if (! (post.date instanceof Date)) {
+    post.date = new Date(post.date);
+  }
+
+  return post;
+}
+
 const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void) => {
   const sema = useContext(SemaContext);
 
@@ -10,8 +23,7 @@ const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void)
     const id = getCdxItemId(cdxItem);
     const item = localStorage.getItem(id);
     if (item != null) {
-      const cachedData = JSON.parse(item);
-      setData(cachedData.data ?? false);
+      setData(parseStorageItem(item));
     } else {
       (async () => {
         await sema.acquire();

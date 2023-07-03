@@ -189,7 +189,10 @@ function extractOneTag(tag: ChildNode) {
     const nodeA = tag as HTMLAnchorElement;
     if (nodeA.classList.contains('twitter-hashtag')) {
       return nodeA.textContent + " ";
-    }
+    } else if (nodeA.classList.contains('twitter-timeline-link') && 
+      ! nodeA.classList.contains('u-hidden')) {
+        return ` ${nodeA.textContent} `;
+      }
   } else if (tag.nodeName === "IMG") {
     const nodeImg = tag as HTMLImageElement;
     if (nodeImg.classList.contains('Emoji')) {
@@ -239,7 +242,7 @@ function filterValidAvatar(url: string | undefined | null) {
     if (url.split('/').some(i => i.match('deleted'))) {
       return undefined;
     } else {
-      return url;
+      return toHttps(url);
     }
   }
 }

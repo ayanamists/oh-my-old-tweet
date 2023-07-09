@@ -18,12 +18,16 @@ export function filterUniqueCdxItems(cdxItems: string[][]) {
       idSet.add(id);
     }
   })
+  res.sort((a, b) => getCdxNumberId(a) - getCdxNumberId(b));
   return res;
 }
 
 function isValidCdxItem(cdxItem: string[]) {
-  const url = getCdxItemUrl(cdxItem);
-  return url.split('/').includes('status');
+  return !Number.isNaN(getCdxNumberId(cdxItem));
+}
+
+function getCdxNumberId(cdxItem: string[]) {
+  return parseInt(getCdxItemId(cdxItem));
 }
 
 export function getCdxItemUrl(cdxItem: string[]) {
@@ -34,7 +38,11 @@ export function getCdxItemId(cdxItem: string[]) {
   // TODO: use real url library for this
   const origUrl = getCdxItemUrl(cdxItem);
   const splitted = origUrl.split('/');
-  const preId = splitted[splitted.length - 1];
+  const statusIdx = splitted.indexOf('status');
+  if (statusIdx === -1) {
+    return "NaN";
+  }
+  const preId = splitted[statusIdx + 1];
   const splitted2 = preId.split('?');
   return splitted2[0];
 }
@@ -189,8 +197,7 @@ function extractOneTag(tag: ChildNode) {
     const nodeA = tag as HTMLAnchorElement;
     if (nodeA.classList.contains('twitter-hashtag')) {
       return nodeA.textContent + " ";
-    } else if (nodeA.classList.contains('twitter-timeline-link') && 
-      ! nodeA.classList.contains('u-hidden')) {
+    } else if (! nodeA.classList.contains('u-hidden')) {
         return ` ${nodeA.textContent} `;
       }
   } else if (tag.nodeName === "IMG") {

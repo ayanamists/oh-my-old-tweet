@@ -1,4 +1,5 @@
 import Post from "./Post";
+import { mayRemoveAtSym } from "./Utils";
 import getUrl from "./corsUrl";
 
 interface TweetInfo {
@@ -264,12 +265,4 @@ function toHttps(url: string) {
     urlObj.protocol = 'https:';
   }
   return urlObj.toString();
-}
-
-export function mayRemoveAtSym(str: string | undefined) {
-  if (str?.charAt(0) === '@') {
-    return str.substring(1, str.length);
-  } else {
-    return str;
-  }
 }

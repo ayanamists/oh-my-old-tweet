@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './App.css';
 import { Timeline } from './Timeline';
-import { mayRemoveAtSym } from './Data';
+import { parseUserName } from './InputParser';
 
 function MarkBox({ text } : { text: string }) {
   return <mark className="px-2 text-white bg-tw-blue text-white rounded">{text}</mark>
@@ -11,7 +11,7 @@ function App() {
   const [user, setUser] = useState<string>();
   const [inputValue, setInputValue] = useState<string>("_iori_n");
 
-  const handleStart = () => { setUser(mayRemoveAtSym(inputValue)?.trim()) };
+  const handleStart = () => { setUser(parseUserName(inputValue)) };
 
   return (<div className='bg-white dark:bg-black'>
   {(user == null) ?

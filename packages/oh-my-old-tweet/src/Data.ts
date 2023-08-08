@@ -60,7 +60,7 @@ export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
   const timeStamp = cdxItem[1];
   const origUrl = getCdxItemUrl(cdxItem);
   const id = getCdxItemId(cdxItem);
-  const pageUrl = `https://web.archive.org/web/${timeStamp}/${origUrl}`;
+  const pageUrl = `http://web.archive.org/web/${timeStamp}/${origUrl}`;
   return fetch(getUrl(pageUrl))
     .then(res => {
       if (!res.ok) {

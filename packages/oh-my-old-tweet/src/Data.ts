@@ -60,7 +60,7 @@ export function getOnePage(config: CorsProxyConfig, cdxItem: string[]): Promise<
   const timeStamp = cdxItem[1];
   const origUrl = getCdxItemUrl(cdxItem);
   const id = getCdxItemId(cdxItem);
-  const pageUrl = `http://web.archive.org/web/${timeStamp}/${origUrl}`;
+  const pageUrl = `https://web.archive.org/web/${timeStamp}/${origUrl}`;
   return fetch(getUrl(config, pageUrl))
     .then(res => {
       if (!res.ok) {

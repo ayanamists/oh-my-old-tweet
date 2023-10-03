@@ -7,6 +7,7 @@ interface TweetInfo {
   id: string;
   pageUrl: string;
   tweetUrl: string;
+  timestamp: string;
 };
 
 export function filterUniqueCdxItems(cdxItems: string[][]) {
@@ -79,7 +80,8 @@ export function getOnePage(config: CorsProxyConfig, cdxItem: string[]): Promise<
         id: id,
         pageUrl: pageUrl,
         tweetUrl: origUrl,
-        lang: lang
+        lang: lang,
+        timestamp: timeStamp
       };
 
       if (mainRegion != null) {
@@ -127,11 +129,11 @@ function extractFromMetaTag(metaTag: Element, info: TweetInfo): Post | undefined
   const userName = mayRemoveAtSym(aRoleLinks[2].textContent ?? undefined);
   const fullName = aRoleLinks[1].textContent ?? undefined;
   const text = data.querySelector('div[data-testid="tweetText"]')?.textContent ?? undefined;
-  const images = extractImages(data);
+  const images = extractImages(data, info);
   const timeMeta = div.querySelector('meta[itemprop="datePublished"]')?.getAttribute('content');
   const time = new Date(timeMeta ?? 0);
   const avatarRegion = div.querySelector('div[data-testid="Tweet-User-Avatar"]');
-  const avatar = filterValidAvatar(avatarRegion?.querySelector('img')?.getAttribute('src'));
+  const avatar = filterValidAvatar(avatarRegion?.querySelector('img')?.getAttribute('src'), info);
 
   return {
     user: {
@@ -156,10 +158,10 @@ function extractFromMainRegion(mainRegion: Element, info: TweetInfo): Post | und
   const textRegion = mainRegion
     .querySelector<HTMLElement>('div.js-tweet-text-container > p')
   const text = textRegion == null ? undefined : extractText(textRegion);
-  const images = extractImages(mainRegion);
+  const images = extractImages(mainRegion, info);
 
   const avatarRegion = mainRegion.querySelector('img.avatar');
-  const avatar = filterValidAvatar(avatarRegion?.getAttribute('src'));
+  const avatar = filterValidAvatar(avatarRegion?.getAttribute('src'), info);
 
   // TODO: correctly handle reply:
   if (images.length === 0 && isReply(mainRegion)) {
@@ -219,12 +221,12 @@ function getOneElementByClassName(doc: Element, name: string) {
   }
 }
 
-function extractImages(mainRegion: Element) {
+function extractImages(mainRegion: Element, info: TweetInfo) {
   const images = mainRegion.getElementsByTagName('img');
   const urls = [];
   for (let i = 0; i < images.length; ++i) {
     if (isValidImgTag(images[i])) {
-      urls.push(toHttps(images[i].src));
+      urls.push(fixImageUrl(images[i].src, info));
     }
   }
   return urls;
@@ -243,14 +245,14 @@ function isValidImgTag(tag: HTMLImageElement) {
   }
 }
 
-function filterValidAvatar(url: string | undefined | null) {
+function filterValidAvatar(url: string | undefined | null, info: TweetInfo) {
   if (url == null) {
     return undefined;
   } else {
     if (url.split('/').some(i => i.match('deleted'))) {
       return undefined;
     } else {
-      return toHttps(url);
+      return fixImageUrl(url, info);
     }
   }
 }
@@ -265,4 +267,13 @@ function toHttps(url: string) {
     urlObj.protocol = 'https:';
   }
   return urlObj.toString();
+}
+
+function fixImageUrl(url: string, info: TweetInfo) {
+  const urlObj = new URL(url);
+  if (urlObj.hostname !== "web.archive.org") {
+    return `https://web.archive.org/web/${info.timestamp}im_/${url}`
+  } else {
+    return toHttps(url);
+  }
 }

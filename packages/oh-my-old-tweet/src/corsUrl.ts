@@ -4,7 +4,7 @@ export type CorsProxyConfig = {
   urlEncoding: boolean
 }
 
-export const defaultPrefix = "https://cors-proxy.ayanamists.workers.dev/?target=";
+const defaultPrefix = "https://cors-proxy.ayanamists.workers.dev/?target=";
 
 const key = "omot-cors-config"
 

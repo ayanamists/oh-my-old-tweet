@@ -6,10 +6,10 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import CheckIcon from '@mui/icons-material/Check';
-import { CssBaseline, Drawer, FormControl, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
+import { CssBaseline, Drawer, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
 import { ThemeProvider } from '@emotion/react';
 import { ConfigContext } from '../context/ConfigContext';
-import { CorsProxyConfig, getDefaultConfig, saveToLocal } from '../corsUrl';
+import { CorsProxyConfig, defaultConfig, getDefaultConfig, saveToLocal } from '../corsUrl';
 
 type MainLayoutProps = {
   children: React.ReactNode,
@@ -36,22 +36,22 @@ function SideBar() {
       <ListItem>
         <Box sx={{ minWidth: 120 }}>
           <FormControl fullWidth>
+            <InputLabel id="mode-select-label">Mode</InputLabel>
             <Select placeholder="Choose one…"
-              labelId="mode-select"
+              labelId="mode-select-label"
               value={mode}
-              label="Age"
+              label="mode"
               onChange={(e) => {
                 let v = e.target.value;
                 const intValue = Number.parseInt(v.toString());
                 setMode(intValue);
-                const prefixNew = intValue === 2 ? "" :
-                  intValue === 1 ? getDefaultConfig().prefix :
-                    prefix;
-                setConfig({
+                const newConfig = intValue === 1 ? defaultConfig : {
                   ...initConfig,
                   mode: intValue,
-                  prefix: prefixNew
-                });
+                  prefix: intValue === 2 ? "" : initConfig.prefix
+                };
+                setPrefix(newConfig.prefix);
+                setConfig(newConfig);
               }}
             >
               <MenuItem value={1}>Cloudflare</MenuItem>
@@ -62,7 +62,7 @@ function SideBar() {
         </Box>
       </ListItem>
       <ListItem>
-        <TextField fullWidth label="proxy url" id="ProxyUrl" onChange={(e) => {
+        <TextField fullWidth label="Proxy URL" id="ProxyUrl" onChange={(e) => {
           setPrefix(e.target.value);
           setConfig({
             ...initConfig,

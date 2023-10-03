@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "cardBuild": "cd packages/react-tweet-card && npm run dev-build",
-    "cardProductionBuild": "cd packages/react-tweet-card && npm run build",
-    "start": "cd packages/oh-my-old-tweet && npm run start",
-    "siteBuild": "npm run build -w packages/oh-my-old-tweet",
+    "cardBuild": "cd packages/react-tweet-card && yarn dev-build",
+    "cardProductionBuild": "cd packages/react-tweet-card && yarn build",
+    "start": "cd packages/oh-my-old-tweet && yarn start",
+    "siteBuild": "cd packages/oh-my-old-tweet && yarn build",
     "build": "run-s cardProductionBuild siteBuild"
   },
   "keywords": [],
@@ -22,5 +22,6 @@
   },
   "dependencies": {
     "async-sema": "^3.1.1"
-  }
+  },
+  "private": true
 }

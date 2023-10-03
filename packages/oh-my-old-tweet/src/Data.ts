@@ -1,6 +1,6 @@
 import Post from "./Post";
 import { mayRemoveAtSym } from "./Utils";
-import getUrl from "./corsUrl";
+import { CorsProxyConfig, getUrl } from "./corsUrl";
 
 interface TweetInfo {
   lang: string;
@@ -48,20 +48,20 @@ export function getCdxItemId(cdxItem: string[]) {
   return splitted2[0];
 }
 
-export function getCdxList(user: string) {
+export function getCdxList(config: CorsProxyConfig, user: string) {
   const req = `twitter.com/${user}/`
-  return fetch(getUrl(`https://web.archive.org/cdx/search/cdx?url=${req}&matchType=prefix&output=json`))
+  return fetch(getUrl(config, `https://web.archive.org/cdx/search/cdx?url=${req}&matchType=prefix&output=json`))
     .then(res => res.json())
     .then(j => j as string[][]);
 }
 
 
-export function getOnePage(cdxItem: string[]): Promise<Post | undefined> {
+export function getOnePage(config: CorsProxyConfig, cdxItem: string[]): Promise<Post | undefined> {
   const timeStamp = cdxItem[1];
   const origUrl = getCdxItemUrl(cdxItem);
   const id = getCdxItemId(cdxItem);
   const pageUrl = `http://web.archive.org/web/${timeStamp}/${origUrl}`;
-  return fetch(getUrl(pageUrl))
+  return fetch(getUrl(config, pageUrl))
     .then(res => {
       if (!res.ok) {
         throw Error(res.statusText);

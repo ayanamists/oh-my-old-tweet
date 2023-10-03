@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import SemaContext from "./SemaContext";
 import Post from "./Post";
 import { getCdxItemId, getCdxItemUrl, getOnePage } from "./Data";
+import { ConfigContext } from "./context/ConfigContext";
 
 function parseStorageItem(str: string): Post | boolean {
   const data = JSON.parse(str);
@@ -18,7 +19,7 @@ function parseStorageItem(str: string): Post | boolean {
 
 const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void) => {
   const sema = useContext(SemaContext);
-
+  const config = useContext(ConfigContext);
   useEffect(() => {
     const id = getCdxItemId(cdxItem);
     const item = localStorage.getItem(id);
@@ -29,10 +30,12 @@ const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void)
         await sema.acquire();
 
         try {
-          await (getOnePage(cdxItem).then((response) => {
+          await (getOnePage(config, cdxItem).then((response) => {
             try {
               localStorage.setItem(id, JSON.stringify({ data: response }));
-              // TODO: clear storage if full
+            } catch (err) {
+              console.info(`encounter ${err}, local storage full, clear all`);
+              localStorage.clear();
             } finally {
               if (response == null) {
                 setData(false);
@@ -43,6 +46,7 @@ const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void)
           })
           .catch((err) => {
             // TODO: add retry
+            setData(false)
             console.warn(`fail to load ${getCdxItemUrl(cdxItem)}, dut to ${err}`);
           }));
         } finally {
@@ -50,7 +54,7 @@ const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void)
         }
       })();
     }
-  }, [cdxItem, sema, setData]);
+  }, [cdxItem, config, sema, setData]);
 };
 
 export default useCachedFetch;

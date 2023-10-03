@@ -24,9 +24,9 @@ export function getPost(index: number): Post {
   }
 }
 
-export async function loadPosts(start: number, end: number) {
-  await Promise.all(postIndex.slice(start, end).map(async (i, idx, _) => {
-    const p = await getOnePage(i);
-    data.set(idx, p ?? false);
-  }));
-}
+// export async function loadPosts(start: number, end: number) {
+//   await Promise.all(postIndex.slice(start, end).map(async (i, idx, _) => {
+//     const p = await getOnePage(i);
+//     data.set(idx, p ?? false);
+//   }));
+// }

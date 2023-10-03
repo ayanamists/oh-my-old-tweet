@@ -20,7 +20,6 @@ A graceful, powerful and easy-to-use tool to see old (including **deleted**) twe
 - Internet Archive cannot store videos. So any video tweet will be displayed by its text content.
 - Internet Archive may not be able to save NSFW tweets.
 - Currently, we don't properly handle retweets and replies (**You can contribute!**).
-- Since July 1, 2023, Internet Archive is not able to save tweets, dues to Elon's new policy.
 
 ## To-do List
 

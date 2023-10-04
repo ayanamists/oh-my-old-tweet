@@ -6,7 +6,9 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import CheckIcon from '@mui/icons-material/Check';
-import { CssBaseline, Drawer, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import HelpIcon from '@mui/icons-material/Help';
+import { Button, CssBaseline, Divider, Drawer, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
 import { ThemeProvider } from '@emotion/react';
 import { ConfigContext } from '../context/ConfigContext';
 import { CorsProxyConfig, defaultConfig, getDefaultConfig, saveToLocal } from '../corsUrl';
@@ -26,12 +28,12 @@ function SideBar() {
     initConfig.urlEncoding = config.urlEncoding;
     saveToLocal(initConfig);
   };
-  return (
+  return (<>
     <List>
       <ListItem>
-        <Box>
+        <Typography variant='subtitle2'>
           Cors Proxy Settings
-        </Box>
+        </Typography>
       </ListItem>
       <ListItem>
         <Box sx={{ minWidth: 120 }}>
@@ -90,7 +92,7 @@ function SideBar() {
             'aria-labelledby': 'switch-list-label-coding',
           }}
           onChange={() => {
-            const codingNew = ! coding
+            const codingNew = !coding
             setCoding(codingNew);
             setConfig({
               ...initConfig,
@@ -101,6 +103,26 @@ function SideBar() {
         />
       </ListItem>
     </List>
+    <Divider variant="middle" />
+    <List>
+      <ListItem>
+        <Typography variant='subtitle2'>
+          Cache Settings
+        </Typography>
+      </ListItem>
+
+      <ListItem>
+        <Button
+          variant="contained"
+          onClick={() => {
+            localStorage.clear();
+          }}
+        >
+          Clear Cache
+        </Button>
+      </ListItem>
+    </List>
+  </>
   );
 }
 
@@ -136,6 +158,22 @@ function ButtonAppBar() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             OMOT
           </Typography>
+          <IconButton
+            size='large'
+            color='inherit'
+            aria-label='github'
+            href='https://github.com/ayanamists/oh-my-old-tweet'
+            target='_blank'>
+            <GitHubIcon />
+          </IconButton>
+          <IconButton
+            size='large'
+            color='inherit'
+            aria-label='github'
+            href='https://github.com/ayanamists/oh-my-old-tweet/wiki/About_CORS_Proxy'
+            target='_blank'>
+            <HelpIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
     </Box>
@@ -160,7 +198,7 @@ function MainLayout({ children }: MainLayoutProps) {
         <ButtonAppBar />
         <Box component="main" color={'inherit'}>
           <Toolbar />
-          <Box minHeight={'90vh'}
+          <Box minHeight={'80vh'}
             justifyItems={'center'}
             justifyContent={'center'}
             alignItems={'center'}

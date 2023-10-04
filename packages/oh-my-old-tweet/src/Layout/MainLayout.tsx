@@ -187,6 +187,9 @@ function MainLayout({ children }: MainLayoutProps) {
       createTheme({
         palette: {
           mode: prefersDarkMode ? 'dark' : 'light',
+          primary: {
+            main: '#1DA1F2'
+          }
         },
       }),
     [prefersDarkMode]);

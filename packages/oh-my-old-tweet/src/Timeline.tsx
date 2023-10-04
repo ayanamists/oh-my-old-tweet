@@ -9,7 +9,7 @@ import { ErrorBoundary, useErrorBoundary, } from "react-error-boundary";
 import { Box, CircularProgress, List, ListItem, Typography } from "@mui/material";
 
 function LoadingCircle() {
-  return (<CircularProgress />);
+  return (<CircularProgress size={60}/>);
 }
 
 function fallbackRender({ error } : { error: Error }) {

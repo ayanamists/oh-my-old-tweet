@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { getCdxItemId, getCdxItemUrl } from "./Data";
 import Post from "./Post";
 import { TCard } from "./TCard";
 import useCachedFetch from "./useCachedFetch";
+import { ShowReplyContext } from "./context/ShowReplyContext";
 
 export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
   const [post, setPost] = useState<Post | boolean>();
@@ -12,9 +13,10 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
   useCachedFetch(cdxItem, setPost);
 
   const pageUrl = getCdxItemUrl(cdxItem);
+  const { showReply } = useContext(ShowReplyContext);
   return (<div ref={elementRef}>
     {
-      (post === false || post === true) ? null :
+      (post === false || post === true || (! showReply && post?.replyInfo != null)) ? null :
         (post == null)
           ? <div style={{ height: '200px' }} 
             className="text-black dark:text-white text-center flex flex-col item-center justify-center">

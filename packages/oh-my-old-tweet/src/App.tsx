@@ -13,8 +13,7 @@ function MainPage() {
   const [inputValue, setInputValue] = useState<string>("_iori_n");
 
   const handleStart = () => { setUser(parseUserName(inputValue)) };
-  return (<div>
-    {(user == null) ?
+  return (user == null) ?
       (<div className='flex flex-col'>
         <div className='mx-auto max-w-screen-sm text-center'>
           <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl">
@@ -54,8 +53,7 @@ function MainPage() {
           </button>
         </div>
       </div>)
-      : <Timeline user={user} />}
-  </div>);
+      : <Timeline user={user} />;
 }
 
 function App() {

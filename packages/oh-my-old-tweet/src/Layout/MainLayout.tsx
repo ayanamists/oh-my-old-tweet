@@ -12,6 +12,7 @@ import { Button, CssBaseline, Divider, Drawer, FormControl, InputLabel, List, Li
 import { ThemeProvider } from '@emotion/react';
 import { ConfigContext } from '../context/ConfigContext';
 import { CorsProxyConfig, defaultConfig, getDefaultConfig, saveToLocal } from '../corsUrl';
+import { ShowReplyContext, ShowReplyContextProvider } from '../context/ShowReplyContext';
 
 type MainLayoutProps = {
   children: React.ReactNode,
@@ -22,6 +23,7 @@ function SideBar() {
   const [mode, setMode] = React.useState(initConfig.mode);
   const [prefix, setPrefix] = React.useState(initConfig.prefix);
   const [coding, setCoding] = React.useState(initConfig.urlEncoding);
+  const { showReply, toggleShowReply } = React.useContext(ShowReplyContext);
   const setConfig = (config: CorsProxyConfig) => {
     initConfig.mode = config.mode;
     initConfig.prefix = config.prefix;
@@ -124,6 +126,27 @@ function SideBar() {
         </Button>
       </ListItem>
     </List>
+    <Divider variant="middle" />
+    <List>
+      <ListItem>
+        <Typography variant='subtitle2'>
+          Content Settings
+        </Typography>
+      </ListItem>
+
+      <ListItem>
+        <ListItemText id="switch-list-label-reply" primary="Show Replies" />
+        <Switch
+          edge="end"
+          inputProps={{
+            'aria-labelledby': 'switch-list-label-reply',
+          }}
+          onChange={toggleShowReply}
+          checked={showReply}
+        />
+      </ListItem>
+    </List>
+
   </>
   );
 }
@@ -198,6 +221,7 @@ function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <ConfigContext.Provider value={getDefaultConfig()}>
+      <ShowReplyContextProvider>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <ButtonAppBar />
@@ -212,7 +236,8 @@ function MainLayout({ children }: MainLayoutProps) {
           </Box>
         </Box>
       </ThemeProvider>
-    </ConfigContext.Provider>)
+    </ShowReplyContextProvider>
+    </ConfigContext.Provider>);
 }
 
 export default MainLayout;

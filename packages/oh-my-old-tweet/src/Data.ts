@@ -1,8 +1,8 @@
-import Post from "./Post";
+import Post, { ReplyInfo } from "./Post";
 import { mayRemoveAtSym } from "./Utils";
 import { CorsProxyConfig, getUrl } from "./corsUrl";
 
-interface TweetInfo {
+type TweetInfo = {
   lang: string;
   id: string;
   pageUrl: string;
@@ -128,6 +128,8 @@ function extractFromMetaTag(metaTag: Element, info: TweetInfo): Post | undefined
   const aRoleLinks = data.querySelectorAll('a[role="link"]');
   const userName = mayRemoveAtSym(aRoleLinks[2].textContent ?? undefined);
   const fullName = aRoleLinks[1].textContent ?? undefined;
+  const author = data.querySelector('div[itemprop="author"]');
+  const id = author?.querySelector('meta[itemprop="identifier"]')?.getAttribute('content') ?? undefined;
   const text = data.querySelector('div[data-testid="tweetText"]')?.textContent ?? undefined;
   const images = extractImages(data, info);
   const timeMeta = div.querySelector('meta[itemprop="datePublished"]')?.getAttribute('content');
@@ -139,7 +141,8 @@ function extractFromMetaTag(metaTag: Element, info: TweetInfo): Post | undefined
     user: {
       userName: userName,
       fullName: fullName,
-      avatar: avatar
+      avatar: avatar,
+      id: id
     },
     id: info.id,
     text: text,
@@ -151,6 +154,8 @@ function extractFromMetaTag(metaTag: Element, info: TweetInfo): Post | undefined
 }
 
 function extractFromMainRegion(mainRegion: Element, info: TweetInfo): Post | undefined {
+  const tweetRegion = getOneElementByClassName(mainRegion, 'tweet');
+  const userId = tweetRegion?.getAttribute('data-user-id') ?? undefined;
   const name = getOneElementByClassName(mainRegion, 'fullname')?.textContent ?? undefined;
   const userName = mainRegion.querySelector('.username > b')?.textContent ?? undefined;
   const timeMsStr = mainRegion.querySelector('._timestamp')?.getAttribute('data-time-ms');
@@ -164,23 +169,35 @@ function extractFromMainRegion(mainRegion: Element, info: TweetInfo): Post | und
   const avatar = filterValidAvatar(avatarRegion?.getAttribute('src'), info);
 
   // TODO: correctly handle reply:
+  let replyInfo: ReplyInfo | undefined = undefined;
   if (images.length === 0 && isReply(mainRegion)) {
-    console.log(`${info.pageUrl} is reply`);
-    return;
+    // console.log(`${info.pageUrl} is reply`);
+    const replyRegion = getOneElementByClassName(mainRegion, 'ReplyingToContextBelowAuthor');
+    const targetUserRegion = replyRegion?.querySelector('a');
+    const rid = targetUserRegion?.getAttribute('data-user-id') ?? undefined;
+    const rUserName = targetUserRegion?.getAttribute('href')?.split('/').slice(-1);
+    replyInfo = {
+      targetUser: {
+        userName: rUserName?.[0] ?? userName,
+        id: rid ?? userId
+      }
+    }
   }
 
   return {
     user: {
       userName: userName,
       fullName: name,
-      avatar: avatar
+      avatar: avatar,
+      id: userId
     },
     id: info.id,
     text: text,
     images: images,
     archiveUrl: info.pageUrl,
     tweetUrl: info.tweetUrl,
-    date: time
+    date: time,
+    replyInfo: replyInfo
   };
 }
 

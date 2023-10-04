@@ -115,7 +115,9 @@ function SideBar() {
         <Button
           variant="contained"
           onClick={() => {
+            const cfg = initConfig;
             localStorage.clear();
+            saveToLocal(cfg);
           }}
         >
           Clear Cache

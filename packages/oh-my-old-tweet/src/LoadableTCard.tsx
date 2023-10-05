@@ -1,6 +1,5 @@
 import { useContext, useRef, useState } from "react";
-import { getCdxItemId, getCdxItemUrl } from "./Data";
-import Post from "./Post";
+import { Post, getCdxItemId, getCdxItemUrl } from "twitter-data-parser";
 import { TCard } from "./TCard";
 import useCachedFetch from "./useCachedFetch";
 import { ShowReplyContext } from "./context/ShowReplyContext";

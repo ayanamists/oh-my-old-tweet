@@ -4,11 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "parserBuild": "cd packages/twitter-data-parser && yarn build",
     "cardBuild": "cd packages/react-tweet-card && yarn dev-build",
     "cardProductionBuild": "cd packages/react-tweet-card && yarn build",
     "start": "cd packages/oh-my-old-tweet && yarn start",
     "siteBuild": "cd packages/oh-my-old-tweet && yarn build",
-    "build": "run-s cardProductionBuild siteBuild"
+    "build": "run-s parserBuild cardProductionBuild siteBuild"
   },
   "keywords": [],
   "author": "",

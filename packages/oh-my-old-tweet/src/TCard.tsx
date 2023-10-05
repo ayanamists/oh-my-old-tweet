@@ -1,5 +1,5 @@
-import Post from "./Post"
 import TweetCard from "react-tweet-card"
+import { Post } from "twitter-data-parser";
 
 export function TCard({ p }: { p: Post }) {
   let name = p.user.fullName ?? "";
@@ -14,7 +14,8 @@ export function TCard({ p }: { p: Post }) {
     tweet={textAll}
     time={p.date}
     source="Twitter for iPhone"
-    tweetImages={p.images.map(i => { return { src: i } })}
+    tweetImages={p.images.length === 0 ?
+      undefined : p.images.map(i => { return { src: i } })}
     permalink={p.tweetUrl}
     archiveLink={p.archiveUrl}
   />);

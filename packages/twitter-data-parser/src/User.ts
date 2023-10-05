@@ -1,8 +1,6 @@
-interface User {
+export type User = {
   fullName?: string;
   avatar?: string;
   userName?: string;
   id?: string;
 }
-
-export default User;

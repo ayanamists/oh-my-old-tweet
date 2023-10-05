@@ -1,8 +1,8 @@
 import { useContext, useEffect } from "react";
 import SemaContext from "./SemaContext";
-import Post from "./Post";
-import { getCdxItemId, getCdxItemUrl, getOnePage } from "./Data";
+import { Post, getCdxItemId, getCdxItemUrl } from "twitter-data-parser";
 import { ConfigContext } from "./context/ConfigContext";
+import { getOnePage } from "./Data";
 
 function parseStorageItem(str: string): Post | boolean {
   const data = JSON.parse(str);

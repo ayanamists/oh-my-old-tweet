@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from "react";
-import { filterUniqueCdxItems, getCdxItemId, getCdxList } from "./Data";
+import { filterUniqueCdxItems, getCdxItemId } from "twitter-data-parser";
+import { getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import SemaContext from "./SemaContext";
 import { Sema } from "async-sema";

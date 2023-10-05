@@ -1,11 +1,11 @@
-import User from "./User";
+import { User } from "./User";
 
 export type ReplyInfo = {
   targetPostId?: string,
   targetUser: User,
 }
 
-interface Post {
+export interface Post {
   user: User;
   id: string;
   text?: string;
@@ -15,5 +15,3 @@ interface Post {
   archiveUrl: string;
   replyInfo?: ReplyInfo;
 }
-
-export default Post;

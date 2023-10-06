@@ -1,8 +1,7 @@
 {
   "name": "twitter-data-parser",
   "version": "1.0.0",
-  "main": "dist/index.node.js",
-  "types": "dist/index.d.ts",
+  "types": "./dist/index.d.ts",
   "license": "MIT",
   "scripts": {
     "build": "webpack --env node && webpack --env browser",
@@ -19,8 +18,10 @@
     "jsdom": "^22.1.0"
   },
   "browser": {
-    "jsdom": false,
-    "dist/index.node.js": false,
-    "twitter-data-parser": "dist/index.browser.js"
+    "jsdom": false
+  },
+  "exports": {
+    "node": "./dist/index.node.js",
+    "default": "./dist/index.js"
   }
 }

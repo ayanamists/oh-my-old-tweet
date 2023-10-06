@@ -203,7 +203,7 @@ function extractImages(mainRegion: Element, info: ArchiveTweetInfo1) {
 }
 
 function isValidImgTag(tag: HTMLImageElement) {
-  const stage1 = !tag.classList.contains('avatar') && tag.src
+  const stage1 = !tag.classList.contains('avatar') && !tag.classList.contains('twitter-hashflag') && tag.src
   if (stage1) {
     const src = tag.src;
     const splitted = src.split('/');

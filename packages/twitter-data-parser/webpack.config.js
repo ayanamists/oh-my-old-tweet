@@ -1,9 +1,10 @@
 const path = require('path');
 
 module.exports = (env, argv) => {
+  const index = `index${env.browser ? "" : ".node"}.js`;
   const config = {
     entry: './src/index.ts',
-    mode: 'production',
+    mode: 'development',
     devtool: 'source-map',
     module: {
       rules: [
@@ -18,11 +19,12 @@ module.exports = (env, argv) => {
       extensions: ['.tsx', '.ts', '.js'],
     },
     output: {
-      filename: `index.${env.browser ? "browser" : "node"}.js`,
+      filename: index,
       path: path.resolve(__dirname, 'dist'),
-      libraryTarget: 'umd',
-      library: 'twitter-data-parser',
-      umdNamedDefine: true,
+      library: {
+        name: 'twitter-data-parser',
+        type: "umd"
+      },
     },
     target: env.browser ? 'web' : 'node',
   }

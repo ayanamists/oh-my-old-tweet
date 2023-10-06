@@ -1,5 +1,6 @@
 import { parseDOM } from "./PolyfillDOMParser";
 import { Post, ReplyInfo } from "./Post";
+import { getWarn } from "./Utils";
 
 export type ArchiveTweetInfo = {
   id: string;
@@ -44,7 +45,7 @@ export function parsePost(html: string, { id, timestamp, userName }: ArchiveTwee
     if (metaTag != null) {
       return extractFromMetaTag(metaTag, internalInfo);
     } else {
-      console.warn(`[TweetParser]: Cannot find possible extraction method. url: ${pageUrl}`);
+      console.warn(getWarn(`Cannot find possible extraction method. url: ${pageUrl}.`));
       return;
     }
   }
@@ -74,7 +75,7 @@ function extractFromMetaTag(metaTag: Element, info: ArchiveTweetInfo1): Post | u
   }
   const article = div.getElementsByTagName('article');
   if (article.length !== 1) {
-    console.warn(`During extraction, multiple article. url: ${info.pageUrl}`);
+    console.warn(getWarn(`During extraction, multiple article. url: ${info.pageUrl}`));
   }
   const data = article[0];
   const aRoleLinks = data.querySelectorAll('a[role="link"]');

@@ -1,0 +1,24 @@
+{
+  "name": "omot-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "yarn build && node dist/index.js",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^4",
+    "commander": "^11.0.0",
+    "fetch-retry": "^5.0.6",
+    "twitter-data-parser": "^1.0.0",
+    "undici": "^5.25.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.2",
+    "typescript": "^5.2.2"
+  }
+}

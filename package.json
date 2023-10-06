@@ -9,7 +9,8 @@
     "cardProductionBuild": "cd packages/react-tweet-card && yarn build",
     "start": "cd packages/oh-my-old-tweet && yarn start",
     "siteBuild": "cd packages/oh-my-old-tweet && yarn build",
-    "build": "run-s parserBuild cardProductionBuild siteBuild"
+    "cliBuild": "cd packages/omot-cli && yarn build",
+    "build": "run-s parserBuild cardProductionBuild siteBuild cliBuild"
   },
   "keywords": [],
   "author": "",

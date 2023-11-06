@@ -4,7 +4,9 @@ import { TCard } from "./TCard";
 import useCachedFetch from "./useCachedFetch";
 import { ShowReplyContext } from "./context/ShowReplyContext";
 
-export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
+export function LoadableTCard({ user, cdxItem }: { 
+  user: string, 
+  cdxItem: string[] }) {
   const [post, setPost] = useState<Post | boolean>();
 
   const elementRef = useRef<HTMLDivElement>(null);
@@ -15,7 +17,8 @@ export function LoadableTCard({ cdxItem }: { cdxItem: string[] }) {
   const { showReply } = useContext(ShowReplyContext);
   return (<div ref={elementRef}>
     {
-      (post === false || post === true || (! showReply && post?.replyInfo != null)) ? null :
+      (post === false || post === true || (! showReply && post?.replyInfo != null)
+        || (post != null && (post.user.userName ?? "") !== user))? null :
         (post == null)
           ? <div style={{ height: '200px' }} 
             className="text-black dark:text-white text-center flex flex-col item-center justify-center">

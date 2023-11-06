@@ -41,7 +41,7 @@ export function Timeline1({ user }: { user: string }) {
       .then(
         (cdxData) => {
           const l = filterUniqueCdxItems(cdxData)
-            .map((i) => <LoadableTCard cdxItem={i} key={getCdxItemId(i)} />);
+            .map((i) => <LoadableTCard user={user} cdxItem={i} key={getCdxItemId(i)} />);
           setLst(l);
         })
       .catch(error => showBoundary(error));

@@ -30,7 +30,7 @@ function fallbackRender({ error } : { error: Error }) {
   );
 }
 
-export function Timeline1({ user }: { user: string }) {
+function Timeline1({ user }: { user: string }) {
   let [lst, setLst] = useState<JSX.Element[]>();
   const config = useContext(ConfigContext);
   const { showBoundary } = useErrorBoundary();
@@ -47,10 +47,11 @@ export function Timeline1({ user }: { user: string }) {
       .catch(error => showBoundary(error));
   }, [config, showBoundary, user]);
 
+  // TODO: still need to adjust width
   return (lst == null ? <LoadingCircle /> :
     (lst.length === 0) ? <Empty username={user} /> :
       <SemaContext.Provider value={new Sema(5)}>
-        <div className="min-h-screen">
+        <div className="min-h-screen w-full md:w-[80vw] lg:w-[40vw]">
           <ul className='App'>
             {lst}
           </ul>

@@ -51,7 +51,7 @@ function Timeline1({ user }: { user: string }) {
   return (lst == null ? <LoadingCircle /> :
     (lst.length === 0) ? <Empty username={user} /> :
       <SemaContext.Provider value={new Sema(5)}>
-        <div className="min-h-screen w-full md:w-[80vw] lg:w-[40vw]">
+        <div className="min-h-screen w-full md:w-[80vw] lg:w-[800px]">
           <ul className='App'>
             {lst}
           </ul>

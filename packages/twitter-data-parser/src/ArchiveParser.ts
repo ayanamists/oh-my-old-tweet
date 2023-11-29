@@ -68,6 +68,12 @@ function findMetaTag(doc: Document, id: string) {
   return target;
 }
 
+function extractIdFromMetaTag(container: Element) {
+  const author = container.querySelector('div[itemprop="author"]');
+  const id = author?.querySelector('meta[itemprop="identifier"]')?.getAttribute('content') ?? undefined;
+  return id;
+}
+
 function extractFromMetaTag(metaTag: Element, info: ArchiveTweetInfo1): Post | undefined {
   const div = metaTag.parentElement;
   if (div == null) {
@@ -81,9 +87,9 @@ function extractFromMetaTag(metaTag: Element, info: ArchiveTweetInfo1): Post | u
   const aRoleLinks = data.querySelectorAll('a[role="link"]');
   const userName = mayRemoveAtSym(aRoleLinks[2].textContent ?? undefined);
   const fullName = aRoleLinks[1].textContent ?? undefined;
-  const author = data.querySelector('div[itemprop="author"]');
-  const id = author?.querySelector('meta[itemprop="identifier"]')?.getAttribute('content') ?? undefined;
   const text = data.querySelector('div[data-testid="tweetText"]')?.textContent ?? undefined;
+  const id = extractIdFromMetaTag(data) // method 1, if <meta> is inside <article>
+    ?? extractIdFromMetaTag(div)        // method 2, if <meta> is outside <article>
   const images = extractImages(data, info);
   const timeMeta = div.querySelector('meta[itemprop="datePublished"]')?.getAttribute('content');
   const time = new Date(timeMeta ?? 0);

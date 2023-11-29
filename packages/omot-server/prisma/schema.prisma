@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  originalId   String    @unique
+  joinTime     DateTime? @db.Timestamp(6)
+  leaveTime    DateTime? @db.Timestamp(6)
+  lastModified DateTime  @default(now()) @db.Timestamp(6)
+
+  followedBy User[] @relation("UserFollows")
+  following  User[] @relation("UserFollows")
+
+  posts Post[]
+}
+
+model UserName {
+  id       Int    @id @default(autoincrement())
+  fullName String
+  userName String
+  post     Post?
+}
+
+model UserAvatar {
+  id     Int   @id @default(autoincrement())
+  imgId  Int
+  img    Image @relation(fields: [imgId], references: [id])
+  postId Int   @unique
+  post   Post  @relation(fields: [postId], references: [id])
+}
+
+model UserProfile {
+  id         Int    @id @default(autoincrement())
+  bgImgId    Int
+  background Image  @relation(fields: [bgImgId], references: [id])
+  content    String
+  postId     Int    @unique
+  post       Post   @relation(fields: [postId], references: [id])
+}
+
+model Post {
+  id                  Int          @id @default(autoincrement())
+  originalId          String       @unique
+  userId              Int
+  user                User         @relation(fields: [userId], references: [id])
+  userNameId          Int          @unique
+  userName            UserName     @relation(fields: [userNameId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userAvatar          UserAvatar?
+  userProfile         UserProfile?
+  content             String       @db.Text
+  date                DateTime     @db.Timestamp(6)
+  tweetUrl            String
+  archiveUrl          String?
+  source              String
+  images              Image[]      @relation("PostImages")
+  video               Video?
+  engagement          Engagement?
+  repliesToOriginalId String?
+  lastModified        DateTime     @default(now()) @db.Timestamp(6)
+}
+
+model Engagement {
+  id       Int  @id @default(autoincrement())
+  likes    Int  @default(0)
+  retweets Int  @default(0)
+  postId   Int  @unique
+  post     Post @relation(fields: [postId], references: [id])
+}
+
+model Image {
+  id        Int     @id @default(autoincrement())
+  originUrl String  @unique
+  s3id      String?
+  name      String?
+  width     Int?
+  height    Int?
+
+  userAvatars  UserAvatar[]
+  userProfiles UserProfile[]
+  posts        Post[]        @relation("PostImages")
+}
+
+model Video {
+  id        Int     @id @default(autoincrement())
+  originUrl String  @unique
+  s3id      String?
+  name      String?
+
+  postId Int  @unique
+  post   Post @relation(fields: [postId], references: [id])
+}

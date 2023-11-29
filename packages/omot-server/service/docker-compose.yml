@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    container_name: omot-db
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - "${DATABASE_STORE}:/var/lib/postgresql/data"
+    ports:
+      - "${DATABASE_PORT}:5432"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "${DB_ADMIN_PORT}:8080"
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: omot-minio 
+    restart: always
+    ports:
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "${MINIO_ADMIN_PORT}:${MINIO_ADMIN_PORT}"
+    volumes:
+      - ${MINIO_STORE}:/data
+    environment:
+      - "MINIO_ROOT_USER=${MINIO_ACCESS_KEY}"
+      - "MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}"
+    command: server /data --console-address ":${MINIO_ADMIN_PORT}" --address ":${MINIO_PORT}"
+
+  redis:
+    image: 'redis:latest'
+    ports:
+      - '${REDIS_PORT}:6379'
+

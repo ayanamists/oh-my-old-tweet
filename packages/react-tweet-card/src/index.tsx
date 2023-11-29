@@ -29,13 +29,15 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
   tweetImages?: {
     src: string;
     isVideoThumbnail?: boolean;
+    width?: number;
+    height?: number;
   }[];
   time: Date | string;
   source?: string;
   permalink?: string;
   archiveLink?: string;
   clickableProfileLink?: boolean;
-  theme?: ThemeOption;
+  theme: ThemeOption
   colors?: TweetCardColors;
   gradientBackground?: boolean;
   blurredBackground?: boolean;
@@ -45,7 +47,7 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
   emojis?: boolean;
 };
 
-const TweetCard = ({
+function TweetCard({
   author,
   tweet,
   time,
@@ -58,19 +60,22 @@ const TweetCard = ({
   emojis,
   tweetImages,
   archiveLink,
+  theme,
   ...rest
-}: TweetCardProps) => (
-  <Container {...{ ...rest }}>
-    <UserDetails {...{ ...author, clickableProfileLink }} />
-    <div className="icons">
-      <TwitterLogo {...{ permalink }} />
-      { archiveLink && <ArchiveLogo {...{ ...rest, archiveLink }} /> }
-    </div>
-    <Tweet {...{ tweet }} />
-    {tweetImages?.length && <TweetImages {...{ tweetImages }} />}
-    {showDetails && <Details {...{ time, source, permalink }} />}
-    {showEngagement && <Engagement {...{ ...engagement, emojis }} />}
-  </Container>
-);
+}: TweetCardProps) {
+  return (
+    <Container {...{ ...rest, theme }}>
+      <UserDetails {...{ ...author, clickableProfileLink }} />
+      <div className="icons">
+        <TwitterLogo {...{ permalink }} />
+        {archiveLink && <ArchiveLogo {...{ ...rest, archiveLink, theme }} />}
+      </div>
+      <Tweet {...{ tweet }} />
+      {tweetImages?.length && <TweetImages {...{ tweetImages }} />}
+      {showDetails && <Details {...{ time, source, permalink }} />}
+      {showEngagement && <Engagement {...{ ...engagement, emojis }} />}
+    </Container>
+  );
+}
 
 export default TweetCard;

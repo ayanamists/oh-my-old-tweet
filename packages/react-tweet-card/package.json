@@ -59,7 +59,7 @@
   },
   "dependencies": {
     "isotope-layout": "^3.0.6",
-    "photoswipe": "^5.3.6",
+    "photoswipe": "^5.4.2",
     "react-photoswipe-gallery": "^2.2.7"
   }
 }

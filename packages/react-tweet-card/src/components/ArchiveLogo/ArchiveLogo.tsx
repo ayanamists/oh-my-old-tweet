@@ -1,9 +1,7 @@
-import useTheme from 'hooks/useTheme';
 import { TweetCardProps } from 'index';
 import React, { HTMLAttributes } from 'react';
 
 type ArchiveLogoProps = HTMLAttributes<HTMLDivElement> & {
-  className?: string;
   archiveLink: string;
 } & Pick<
   TweetCardProps,
@@ -16,9 +14,8 @@ type ArchiveLogoProps = HTMLAttributes<HTMLDivElement> & {
 
 function ArchiveLogo({
   archiveLink,
-  ...rest
+  theme
 }: ArchiveLogoProps) {
-  const theme = useTheme(rest.theme);
   const fillColor = theme === 'dark' ? 'white' : 'black';
   return (
     <div>

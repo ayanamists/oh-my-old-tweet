@@ -5,8 +5,23 @@ import { Item } from 'react-photoswipe-gallery';
 import fullFillImage from 'utils/fullFillImage';
 import css from './TweetImageItem.module.css';
 
-function TweetImageItemInternal({ url, width, height } :
-  { url : string, width: number, height: number }) {
+type ImageInfo = {
+  width: number,
+  height: number,
+}
+
+type TweetImageItemProps = {
+  url: string,
+  imgInfo?: ImageInfo
+}
+
+type TweetImageItemInternalProps = {
+  url: string,
+  imgInfo: ImageInfo
+}
+
+function TweetImageItemInternal({ url, imgInfo }: TweetImageItemInternalProps) {
+  const { width, height } = imgInfo;
   return (
     <div
       {...className(globalClassName('image'), css.imageBackground)}
@@ -37,11 +52,11 @@ function TweetImageItemInternal({ url, width, height } :
   );
 }
 
-export default function TweetImageItem({ url } : { url : string}) {
+function ClientTweetImageItem({ url }: { url: string }) {
   const [loaded, setLoaded] = useState(false);
   const [width2, setWidth] = useState(0);
   const [height2, setHeight] = useState(0);
-  const onLoad = useCallback((i : any) => {
+  const onLoad = useCallback((i: any) => {
     setLoaded(true);
     const targetHeight = i.target.height;
     const targetWidth = i.target.width;
@@ -52,7 +67,21 @@ export default function TweetImageItem({ url } : { url : string}) {
 
   if (!loaded) {
     // eslint-disable-next-line jsx-a11y/alt-text
-    return <img src={url} onLoad={onLoad} style={{ opacity: 0 }} />;
+    return <img className="notLoaded" src={url} onLoad={onLoad} style={{ opacity: 0 }} />;
   }
-  return <TweetImageItemInternal url={url} width={width2} height={height2} />;
+  return (
+    <TweetImageItemInternal
+      url={url}
+      imgInfo={
+    { width: width2, height: height2 }
+  } />
+  );
+}
+
+export default function TweetImageItem({ url, imgInfo }: TweetImageItemProps) {
+  if (imgInfo) {
+    const [width, height] = fullFillImage(imgInfo.width, imgInfo.height);
+    return <TweetImageItemInternal url={url} imgInfo={{ width, height }} />;
+  }
+  return <ClientTweetImageItem url={url} />;
 }

@@ -6,7 +6,6 @@ import themes from 'themes';
 import globalClassName from 'utils/globalClassName';
 import useGradientBackground from 'hooks/useGradientBackground';
 import useBlurredBackground from 'hooks/useBlurredBackground';
-import useTheme from 'hooks/useTheme';
 import { TweetCardProps } from 'index';
 import css from './Container.module.css';
 
@@ -29,14 +28,11 @@ const Container = ({
   gradientBackground,
   blurredBackground,
   fitInsideContainer = false,
+  theme,
   ...rest
 }: ContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const twitterLogo = true;
-  // useFontSize(fitInsideContainer, containerRef);
-
-  const theme = useTheme(rest.theme);
-
   const gradientStyle = useMemo(
     () => useGradientBackground(gradientBackground, colors, themes[theme]),
     [gradientBackground, theme, colors.background]

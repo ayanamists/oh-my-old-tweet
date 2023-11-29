@@ -1,7 +1,6 @@
 .imageContainer {
   position: relative;
   width: 100%;
-  max-height: 400px;
 }
 .imageContent {
   top: 0px;
@@ -15,4 +14,7 @@
   border-radius: 0.75rem;
   position: absolute;
   border: solid 1px rgb(207, 217, 222);
+}
+.singleImageRestriction {
+  max-width: 350px;
 }

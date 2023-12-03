@@ -10,7 +10,8 @@
     "start": "cd packages/oh-my-old-tweet && yarn start",
     "siteBuild": "cd packages/oh-my-old-tweet && yarn build",
     "cliBuild": "cd packages/omot-cli && yarn build",
-    "build": "run-s parserBuild cardProductionBuild siteBuild cliBuild"
+    "build": "run-s parserBuild cardProductionBuild siteBuild cliBuild",
+    "test": "cd packages/twitter-data-parser && yarn test"
   },
   "keywords": [],
   "author": "",

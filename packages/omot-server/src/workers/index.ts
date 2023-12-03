@@ -30,5 +30,6 @@ export type ImageDownloadJob = {
 }
 
 export type ProcessedPost = Post & {
-  imageIds: number[]
+  imageIds: number[],
+  avatarId?: number
 }

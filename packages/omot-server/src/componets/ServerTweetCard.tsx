@@ -6,7 +6,9 @@ import dynamic from 'next/dynamic'
 
 function ServerTweetCard({ tweet, user }: DisplayTweet) {
   const mode = useColorScheme();
-  console.log(mode);
+  const content = tweet.repliesToOriginalId == null
+    ? tweet.content 
+    : `Replying to @${tweet.repliesToUserName}:\n${tweet.content}`;
   // some hack here, tweet.date will be string in ssr
   // see https://stackoverflow.com/questions/70449092/reason-object-object-date-cannot-be-serialized-as-json-please-only-return
   const date = new Date(tweet.date);
@@ -14,9 +16,9 @@ function ServerTweetCard({ tweet, user }: DisplayTweet) {
     author={{
       name: user.fullName,
       username: user.userName,
-      image: ""
+      image: user.avatarUrl ?? ""
     }}
-    tweet={tweet.content}
+    tweet={content}
     time={date}
     source="Twitter for iPhone"
     permalink={tweet.tweetUrl}

@@ -1,6 +1,6 @@
 import Queue from 'bull';
 import { ImageDownloadJob } from '.';
-import { Client } from 'minio';
+import { Client, ClientOptions } from 'minio';
 import config from '../../config/config';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,7 +8,7 @@ import { fileTypeFromBuffer } from 'file-type';
 import sizeOf from 'image-size';
 import prisma from '@/util/db';
 
-const minioClient = new Client(config.minio);
+const minioClient = new Client(config.minio as unknown as ClientOptions);
 
 // Function to get the image file name
 async function getImageFileName(url: string, responseHeaders: Headers, buffer: ArrayBuffer) {

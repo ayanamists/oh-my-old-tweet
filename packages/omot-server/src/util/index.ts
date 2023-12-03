@@ -25,11 +25,15 @@ export function processImages(images: Image[]) {
       logger.warn(`Image is not valid: ${img.id}, may be not downloaded yet`)
     } else {
       imgs.push({
-        url: config.minio.getUrl(img.s3id),
+        url: getImageUrl(img),
         width: img.width,
         height: img.height
       })
     }
   }
   return imgs;
+}
+
+export function getImageUrl(image: Image) {
+  return config.minio.getUrl(image.s3id);
 }

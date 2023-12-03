@@ -10,7 +10,7 @@ type DisplayImage = {
 
 export type DisplayTweet = {
   tweet: Post & { images: DisplayImage[] },
-  user: User & UserName
+  user: User & UserName & { avatarUrl?: string } 
 }
 
 type Props = {

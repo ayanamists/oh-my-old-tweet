@@ -31,7 +31,7 @@ export async function storePost(post: ProcessedPost, job: StatusDownloadJob) {
     where: {
       originalId: id
     }
-  })
+  });
 
   const nameProp = {
     userName: user.userName,
@@ -64,6 +64,21 @@ export async function storePost(post: ProcessedPost, job: StatusDownloadJob) {
     userName: {
       create: nameProp
     },
+    ...(post.avatarId && {
+      userAvatar: {
+        create: {
+          img: {
+            connect: {
+              id: post.avatarId
+            }
+          }
+        }
+      }
+    }),
+    ...(post.replyInfo && {
+      repliesToOriginalId: post.replyInfo?.targetPostId,
+      repliesToUserName: post.replyInfo?.targetUser.userName,
+    }),
     lastModified: new Date()
   };
   await (prisma.post.upsert({

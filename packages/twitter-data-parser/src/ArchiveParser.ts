@@ -129,16 +129,22 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
 
   // TODO: correctly handle reply:
   let replyInfo: ReplyInfo | undefined = undefined;
-  if (images.length === 0 && isReply(mainRegion)) {
-    // console.log(`${info.pageUrl} is reply`);
-    const replyRegion = getOneElementByClassName(mainRegion, 'ReplyingToContextBelowAuthor');
-    const targetUserRegion = replyRegion?.querySelector('a');
-    const rid = targetUserRegion?.getAttribute('data-user-id') ?? undefined;
-    const rUserName = targetUserRegion?.getAttribute('href')?.split('/').slice(-1);
-    replyInfo = {
-      targetUser: {
-        userName: rUserName?.[0] ?? userName,
-        id: rid ?? userId
+  if (isReply(mainRegion)) {
+    const parent = mainRegion.parentElement;
+    if (parent != null) {
+      const permalinkInReplyTo = getOneElementByClassName(parent, 'permalink-inner in-reply-to');
+      const targetId = permalinkInReplyTo?.getAttribute('data-replied-tweet-id') ?? undefined;
+      const mainReplyRegion = permalinkInReplyTo?.querySelector(`div[data-tweet-id="${targetId}"]`);
+      if (mainReplyRegion != null) {
+        const rUserName = mainReplyRegion.getAttribute('data-screen-name') ?? undefined;
+        const rid = mainReplyRegion.getAttribute('data-user-id') ?? undefined;
+        replyInfo = {
+          targetUser: {
+            userName: rUserName,
+            id: rid
+          },
+          targetPostId: targetId
+        }
       }
     }
   }

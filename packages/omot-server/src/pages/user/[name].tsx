@@ -1,7 +1,7 @@
 import Timeline, { DisplayTweet } from "@/componets/TimeLine";
 import MainLayout from "@/layouts/MainLayout";
 import { logger } from "@/logger";
-import { processImages, ssrConvert } from "@/util";
+import { getImageUrl, processImages, ssrConvert } from "@/util";
 import prisma from "@/util/db";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
 
@@ -20,6 +20,7 @@ export default function User({
 
 export const getServerSideProps = (async (context) => {
   const userName = context.params?.name;
+  const showReply = context.query?.showReply ?? false;
   if (userName == null) {
     throw new Error("userName is null");
   } else if (typeof userName !== "string") {
@@ -51,11 +52,19 @@ export const getServerSideProps = (async (context) => {
   const userId = user.id;
   const posts = await prisma.post.findMany({
     where: {
-      userId: userId
+      userId: userId,
+      ...(!showReply && {
+        repliesToOriginalId: null
+      })
     },
     include: {
       images: true,
-      userName: true
+      userName: true,
+      userAvatar: {
+        include: {
+          img: true
+        }
+      } 
     },
     orderBy: {
       date: "asc"
@@ -74,7 +83,8 @@ export const getServerSideProps = (async (context) => {
           userName: "",
           fullName: "",
           postId: -1
-        })
+        }),
+        ...(t.userAvatar?.img?.s3id && { avatarUrl: getImageUrl(t.userAvatar.img) })
       }
     }
   });

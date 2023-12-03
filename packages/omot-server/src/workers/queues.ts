@@ -10,7 +10,14 @@ import prisma from "@/util/db";
 import path from "path";
 
 setGlobalDispatcher(
-  new Agent({ factory: (origin) => new Pool(origin, { connections: 32 }) })
+  new Agent({
+    factory: (origin) => new Pool(origin, {
+      connections: 32,
+      connect: {
+        timeout: 30_000
+      }
+    })
+  })
 );
 
 const wait = (ms: any) => new Promise(resolve => setTimeout(resolve, ms));
@@ -64,7 +71,7 @@ export function newCdxJob(Job: CdxJob) {
 
 export function newStatusDownloadJob(job: StatusDownloadJob) {
   statusDownloadQueue.add(job, {
-    attempts: 3,
+    attempts: 5,
     backoff: {
       type: 'exponential',
       delay: 2000
@@ -74,7 +81,7 @@ export function newStatusDownloadJob(job: StatusDownloadJob) {
 
 function newImageDownloadJob(job: ImageDownloadJob) {
   imageDownloadQueue.add(job, {
-    attempts: 3,
+    attempts: 5,
     backoff: {
       type: 'exponential',
       delay: 2000
@@ -120,22 +127,52 @@ cdxQueue.process((job) => {
 
 const concurrency = 10;
 
+let isQueuePaused = false;
 statusDownloadQueue.process(concurrency, async (job) => {
   const data = job.data as StatusDownloadJob;
   const item = data.info;
-  const url = `https://web.archive.org/web/${item.timestamp}/${item.original}`
+  const url = `http://web.archive.org/web/${item.timestamp}/${item.original}`
   const exists = await prisma.post.findUnique({
     where: {
       originalId: item.id
+    },
+    include:{
+      images: true
     }
   });
   if (exists != null && data.downloadMode === DownloadMode.Normal) {
-    job.log(`skip ${url}`);
+    job.log(`skip downloading ${url}`);
+    job.log(`checking for images`);
+    for (const img of exists.images) {
+      if (img.s3id == null) {
+        job.log(`image ${img} not found, re-download`);
+        newImageDownloadJob({
+          url: img.originUrl,
+          parent: exists.originalId,
+          imageId: img.id
+        });
+      }
+    }
     return;
   }
   job.log(`try to download ${url}`);
   const parsedPost = await fetch(url)
-    .then((res) => {
+    .then(async (res) => {
+      if (res.status !== 200) {
+        const delayed = await statusDownloadQueue.getDelayedCount();
+        // TODO: it seems that here's a concurrent race
+        if ((res.status === 429 || delayed > 100) && !isQueuePaused) {
+          isQueuePaused = true;
+          statusDownloadQueue.pause();
+          logger.warn(`bad health, pause statusDownloadQueue for 5s`);
+          setTimeout(() => {
+            statusDownloadQueue.resume();
+            logger.info(`resume statusDownloadQueue`);
+            isQueuePaused = false;
+          }, 5000);
+        }
+        throw new Error(`fetch failed: ${res.status} (${res.statusText})`);
+      }
       job.log(`downloaded ${url}`);
       return res.text().then(async (text) => {
         const post = parsePost(text, { ...item, userName: data.userName });
@@ -144,6 +181,25 @@ statusDownloadQueue.process(concurrency, async (job) => {
           job.log(`failed to parse ${url}`);
           return undefined;
         } else {
+          let avatarId: undefined | number = undefined;
+          if (post.user.avatar != null) {
+            avatarId = await prisma.image.upsert({
+              create: {
+                originUrl: post.user.avatar
+              },
+              update: {},
+              where: {
+                originUrl: post.user.avatar
+              }
+            }).then((img) => img.id);
+            if (avatarId != null) {
+              newImageDownloadJob({
+                url: post.user.avatar,
+                parent: post.id,
+                imageId: avatarId
+              });
+            }
+          }
           // maybe duplicated images
           const visited = new Set<string>();
           for (const img of post.images) {
@@ -174,15 +230,18 @@ statusDownloadQueue.process(concurrency, async (job) => {
           job.log(`parsed ${url}`);
           return ({
             ...post,
-            imageIds: imgIds
+            imageIds: imgIds,
+            avatarId: avatarId
           });
         }
       });
     })
     .catch((err) => {
       const info = `error while processing ${url}: ${err}`;
-      logger.error(info);
       job.log(info);
+      if (err.cause) {
+        job.log(err.cause.message + "\n" + err.cause.stack);
+      }
       if (!isFetchFailed(err)) {
         job.discard();
       }
@@ -199,10 +258,10 @@ imageDownloadQueue.process(concurrency, async (job) => {
   const info = `start downing ${data.url} ...`;
   job.log(info);
   return downloadImage(job).catch(err => {
-    if (!isFetchFailed(err)) {
+    if (!isFetchFailed(err) && !err.message.match("unsupported file type")) {
       job.discard();
     }
-    job.log(`error while processing ${data.url}: ${err}`);
+    job.log(`error while processing ${data.url}: ${err}}`);
     throw err;
   })
 });

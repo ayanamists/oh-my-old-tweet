@@ -8,7 +8,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CheckIcon from '@mui/icons-material/Check';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import HelpIcon from '@mui/icons-material/Help';
-import { Button, CssBaseline, Divider, Drawer, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
+import { Button, CssBaseline, Divider, Drawer, FormControl, InputLabel, Link, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
 import { ThemeProvider } from '@emotion/react';
 import { ConfigContext } from '../context/ConfigContext';
 import { CorsProxyConfig, defaultConfig, getDefaultConfig, saveToLocal } from '../corsUrl';
@@ -181,7 +181,9 @@ function ButtonAppBar() {
             <SideBar />
           </Drawer>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            OMOT
+            <Link href="/" color="inherit" underline='none'>
+              OMOT
+            </Link>
           </Typography>
           <IconButton
             size='large'
@@ -222,21 +224,21 @@ function MainLayout({ children }: MainLayoutProps) {
   return (
     <ConfigContext.Provider value={getDefaultConfig()}>
       <ShowReplyContextProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <ButtonAppBar />
-        <Box component="main" color={'inherit'}>
-          <Toolbar />
-          <Box minHeight={'80vh'}
-            justifyItems={'center'}
-            justifyContent={'center'}
-            alignItems={'center'}
-            sx={{ display: 'grid' }}>
-            {children}
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <ButtonAppBar />
+          <Box component="main" color={'inherit'}>
+            <Toolbar />
+            <Box minHeight={'80vh'}
+              justifyItems={'center'}
+              justifyContent={'center'}
+              alignItems={'center'}
+              sx={{ display: 'grid' }}>
+              {children}
+            </Box>
           </Box>
-        </Box>
-      </ThemeProvider>
-    </ShowReplyContextProvider>
+        </ThemeProvider>
+      </ShowReplyContextProvider>
     </ConfigContext.Provider>);
 }
 

@@ -1,8 +1,8 @@
 import { useContext, useEffect } from "react";
 import SemaContext from "./SemaContext";
-import { Post, getCdxItemId, getCdxItemUrl } from "twitter-data-parser";
+import { Post } from "twitter-data-parser";
 import { ConfigContext } from "./context/ConfigContext";
-import { getOnePage } from "./Data";
+import { MinimalCdxInfo, getOnePage } from "./Data";
 
 function parseStorageItem(str: string): Post | boolean {
   const data = JSON.parse(str);
@@ -17,11 +17,11 @@ function parseStorageItem(str: string): Post | boolean {
   return post;
 }
 
-const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void) => {
+const useCachedFetch = (cdxItem: MinimalCdxInfo, setData: (p: Post | boolean) => void) => {
   const sema = useContext(SemaContext);
   const config = useContext(ConfigContext);
   useEffect(() => {
-    const id = getCdxItemId(cdxItem);
+    const id = cdxItem.id;
     const item = localStorage.getItem(id);
     if (item != null) {
       setData(parseStorageItem(item));
@@ -47,7 +47,7 @@ const useCachedFetch = (cdxItem: string[], setData: (p: Post | boolean) => void)
           .catch((err) => {
             // TODO: add retry
             setData(false)
-            console.warn(`fail to load ${getCdxItemUrl(cdxItem)}, dut to ${err}`);
+            console.warn(`fail to load ${cdxItem}, dut to ${err}`);
           }));
         } finally {
           sema.release();

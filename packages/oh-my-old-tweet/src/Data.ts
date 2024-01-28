@@ -8,16 +8,38 @@ export function getCdxList(config: CorsProxyConfig, user: string) {
     .then(j => j as string[][]);
 }
 
+export interface MinimalCdxInfo {
+  timestamp: string;
+  id: string;
+  origUrl: string;
+};
 
-export function getOnePage(config: CorsProxyConfig, cdxItem: string[]): Promise<Post | undefined> {
-  const timeStamp = cdxItem[1];
-  const origUrl = getCdxItemUrl(cdxItem);
+export function getArchivePageUrl(cdxItem: MinimalCdxInfo) {
+  return `https://web.archive.org/web/${cdxItem.timestamp}/${cdxItem.origUrl}`;
+}
+
+export function getShareLink(user: string, cdxItem: MinimalCdxInfo) {
+  const baseUrl = `${window.location.protocol}//${window.location.host}`;
+  return `${baseUrl}/#/status/${user}/${cdxItem.timestamp}/${cdxItem.id}`;
+}
+
+export function fromCdxItem(cdxItem: string[]): MinimalCdxInfo {
+  return {
+    timestamp: cdxItem[1],
+    id: getCdxItemId(cdxItem),
+    origUrl: getCdxItemUrl(cdxItem)
+  };
+}
+
+export function getOnePage(config: CorsProxyConfig, cdxItem: MinimalCdxInfo): Promise<Post | undefined> {
+  const timeStamp = cdxItem.timestamp;
+  const origUrl = cdxItem.origUrl
   const urlSplit = origUrl.split('/');
   const statusIdx = urlSplit.indexOf("status");
   if (statusIdx !== -1) {
     const user = urlSplit[statusIdx - 1];
-    const id = getCdxItemId(cdxItem);
-    const pageUrl = `https://web.archive.org/web/${timeStamp}/${origUrl}`;
+    const id = cdxItem.id;
+    const pageUrl = getArchivePageUrl(cdxItem);
     return fetch(getUrl(config, pageUrl))
       .then(res => {
         if (!res.ok) {

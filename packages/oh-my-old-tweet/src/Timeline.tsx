@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { filterUniqueCdxItems, getCdxItemId } from "twitter-data-parser";
-import { getCdxList } from "./Data";
+import { getCdxList, fromCdxItem } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import SemaContext from "./SemaContext";
 import { Sema } from "async-sema";
@@ -41,7 +41,7 @@ function Timeline1({ user }: { user: string }) {
       .then(
         (cdxData) => {
           const l = filterUniqueCdxItems(cdxData)
-            .map((i) => <LoadableTCard user={user} cdxItem={i} key={getCdxItemId(i)} />);
+            .map((i) => <LoadableTCard user={user} cdxItem={fromCdxItem(i)} key={getCdxItemId(i)} />);
           setLst(l);
         })
       .catch(error => showBoundary(error));

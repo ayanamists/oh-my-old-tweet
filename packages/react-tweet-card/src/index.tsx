@@ -7,6 +7,7 @@ import TwitterLogo from 'components/TwitterLogo';
 import Engagement from 'components/Engagement';
 import TweetImages from 'components/TweetImages';
 import ArchiveLogo from 'components/ArchiveLogo';
+import CopyShareLink from 'components/CopyShareLink';
 import { ThemeOption, TweetCardColors } from './themes';
 import './index.css';
 
@@ -36,6 +37,7 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
   source?: string;
   permalink?: string;
   archiveLink?: string;
+  shareLink?: string;
   clickableProfileLink?: boolean;
   theme: ThemeOption
   colors?: TweetCardColors;
@@ -60,20 +62,26 @@ function TweetCard({
   emojis,
   tweetImages,
   archiveLink,
+  shareLink,
   theme,
   ...rest
 }: TweetCardProps) {
   return (
     <Container {...{ ...rest, theme }}>
-      <UserDetails {...{ ...author, clickableProfileLink }} />
-      <div className="icons">
-        <TwitterLogo {...{ permalink }} />
-        {archiveLink && <ArchiveLogo {...{ ...rest, archiveLink, theme }} />}
+      <div className="react-tweet-card--header">
+        <UserDetails {...{ ...author, clickableProfileLink }} />
+        <div className="react-tweet-card--icons">
+          <TwitterLogo {...{ permalink }} />
+          {archiveLink && <ArchiveLogo {...{ ...rest, archiveLink, theme }} />}
+        </div>
       </div>
       <Tweet {...{ tweet }} />
       {tweetImages?.length && <TweetImages {...{ tweetImages }} />}
-      {showDetails && <Details {...{ time, source, permalink }} />}
-      {showEngagement && <Engagement {...{ ...engagement, emojis }} />}
+      <div className="react-tweet-card--footer">
+        {showDetails && <Details {...{ time, source, permalink }} />}
+        {showEngagement && <Engagement {...{ ...engagement, emojis }} />}
+        {shareLink && <CopyShareLink {...{ shareLink }} />}
+      </div>
     </Container>
   );
 }

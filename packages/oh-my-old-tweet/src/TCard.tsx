@@ -2,7 +2,12 @@ import { useTheme } from "@mui/material";
 import TweetCard from "react-tweet-card"
 import { Post } from "twitter-data-parser";
 
-export function TCard({ p }: { p: Post }) {
+interface TCardProps {
+  p: Post;
+  shareLink: string
+}
+
+export function TCard({ p, shareLink }: TCardProps) {
   let name = p.user.fullName ?? "";
   const text = p.text ?? "";
   const theme = useTheme().palette.mode;
@@ -21,5 +26,6 @@ export function TCard({ p }: { p: Post }) {
       undefined : p.images.map(i => { return { src: i } })}
     permalink={p.tweetUrl}
     archiveLink={p.archiveUrl}
+    shareLink={shareLink}
   />);
 }

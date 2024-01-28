@@ -13,7 +13,16 @@
   text-decoration: underline;
 }
 
-.icons {
+.react-tweet-card--icons {
   display: flex;
   gap: 0.5rem;
+}
+
+.react-tweet-card--header,
+.react-tweet-card--footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  flex-direction: row;
 }

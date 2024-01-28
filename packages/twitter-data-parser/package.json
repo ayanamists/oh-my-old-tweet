@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "webpack --env node && webpack --env browser",
+    "cli": "ts-node src/cli.ts",
     "test": "jest"
   },
   "devDependencies": {

@@ -145,6 +145,33 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
           },
           targetPostId: targetId
         }
+      } else {
+        // we cannot find the target post, it may be deleted
+        // but we may still extract data from the classes of the tweetRegion
+        const dataReplyToUsersJson = tweetRegion?.getAttribute('data-reply-to-users-json');
+        if (dataReplyToUsersJson != null) {
+          const replyToUsers = JSON.parse(dataReplyToUsersJson);
+          const targetUser = replyToUsers.filter((i: any) => i.id_str !== userId)[0];
+          replyInfo = {
+            targetUser: {
+              userName: targetUser.screen_name,
+              id: targetUser.id_str
+            }
+          }
+        } else {
+          // finally method, use the data-mentions attribute
+          const dataMentions = tweetRegion?.getAttribute('data-mentions');
+          if (dataMentions != null) {
+            const mentions = dataMentions.split(' ');
+            const targetUser = mentions.filter((i) => i !== userName)[0];
+            replyInfo = {
+              targetUser: {
+                userName: targetUser,
+                id: undefined
+              }
+            }
+          }
+        }
       }
     }
   }

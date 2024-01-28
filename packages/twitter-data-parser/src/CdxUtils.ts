@@ -57,6 +57,10 @@ export function getTweetIdByUrl(origUrl: string) {
 
 export function getCdxItemDate(cdxItem: string[]) {
   const timestamp = cdxItem[1];
+  return parseTimeStamp(timestamp);
+}
+
+export function parseTimeStamp(timestamp: string) {
   const year = Number.parseInt(timestamp.substring(0, 4));
   const month = Number.parseInt(timestamp.substring(4, 6)) - 1;
   const day = Number.parseInt(timestamp.substring(6, 8));

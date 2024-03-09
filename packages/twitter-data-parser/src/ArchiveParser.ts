@@ -127,6 +127,10 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
   const avatarRegion = mainRegion.querySelector('img.avatar');
   const avatar = filterValidAvatar(avatarRegion?.getAttribute('src'), info);
 
+  const videoThumbDiv = mainRegion.querySelector('div.PlayableMedia-player');
+  const videoThumbUrlWithQuote = videoThumbDiv?.getAttribute('style')?.match(/url\((.+)\)/)?.[1];
+  const videoThumbUrl = videoThumbUrlWithQuote?.slice(1, -1);
+
   // TODO: correctly handle reply:
   let replyInfo: ReplyInfo | undefined = undefined;
   if (isReply(mainRegion)) {
@@ -189,7 +193,8 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
     archiveUrl: info.pageUrl,
     tweetUrl: info.tweetUrl,
     date: time,
-    replyInfo: replyInfo
+    replyInfo: replyInfo,
+    ...(videoThumbUrl && { videoInfo: { thumbUrl: videoThumbUrl } })
   };
 }
 

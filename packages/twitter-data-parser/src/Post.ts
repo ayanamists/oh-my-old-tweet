@@ -5,6 +5,10 @@ export type ReplyInfo = {
   targetUser: User,
 }
 
+export type VideoInfo = {
+  thumbUrl: string,
+}
+
 export interface Post {
   user: User;
   id: string;
@@ -14,4 +18,5 @@ export interface Post {
   tweetUrl: string;
   archiveUrl: string;
   replyInfo?: ReplyInfo;
+  videoInfo?: VideoInfo;
 }

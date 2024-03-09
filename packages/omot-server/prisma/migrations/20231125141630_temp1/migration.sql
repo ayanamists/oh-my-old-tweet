@@ -1,5 +1,0 @@
--- AlterTable
-ALTER TABLE "Post" ALTER COLUMN "originalId" SET DATA TYPE TEXT;
-
--- AlterTable
-ALTER TABLE "User" ALTER COLUMN "originalId" SET DATA TYPE TEXT;

@@ -1,6 +1,6 @@
 import Queue from "bull";
-import config from "../../config/config.js";
 import { logger } from "@/logger";
+import config from "@/config";
 import { CdxJob, DownloadMode, ImageDownloadJob, Source, StatusDownloadJob } from "./index";
 import { parseCdxItem, parsePost } from "twitter-data-parser";
 import { setGlobalDispatcher, Pool, Agent } from "undici";
@@ -48,6 +48,7 @@ const redis = `redis://${config.redis.host}:${config.redis.port}`
 export const cdxQueue = new Queue(config.queue.cdx, redis);
 export const statusDownloadQueue = new Queue("statusDownload", redis);
 export const imageDownloadQueue = new Queue("imageDownload", redis);
+export const galleryDlLoadingQueue = new Queue("galleryDlLoading", redis);
 
 if (cdxQueue == null) {
   throw new Error("cdxQueue is null");
@@ -136,7 +137,7 @@ statusDownloadQueue.process(concurrency, async (job) => {
     where: {
       originalId: item.id
     },
-    include:{
+    include: {
       images: true
     }
   });
@@ -144,7 +145,7 @@ statusDownloadQueue.process(concurrency, async (job) => {
     job.log(`skip downloading ${url}`);
     job.log(`checking for images`);
     for (const img of exists.images) {
-      if (img.s3id == null) {
+      if (img.dir == null || img.name == null) {
         job.log(`image ${img} not found, re-download`);
         newImageDownloadJob({
           url: img.originUrl,
@@ -156,6 +157,7 @@ statusDownloadQueue.process(concurrency, async (job) => {
     return;
   }
   job.log(`try to download ${url}`);
+  const queryUserName = data.userName;
   const parsedPost = await fetch(url)
     .then(async (res) => {
       if (res.status !== 200) {
@@ -181,6 +183,7 @@ statusDownloadQueue.process(concurrency, async (job) => {
           job.log(`failed to parse ${url}`);
           return undefined;
         } else {
+          const parentDir = queryUserName;
           let avatarId: undefined | number = undefined;
           if (post.user.avatar != null) {
             avatarId = await prisma.image.upsert({
@@ -195,14 +198,15 @@ statusDownloadQueue.process(concurrency, async (job) => {
             if (avatarId != null) {
               newImageDownloadJob({
                 url: post.user.avatar,
-                parent: post.id,
+                parent: parentDir,
                 imageId: avatarId
               });
             }
           }
           // maybe duplicated images
           const visited = new Set<string>();
-          for (const img of post.images) {
+          const allImages = post.images.concat(post.videoInfo?.thumbUrl ?? []);
+          for (const img of allImages) {
             const fileName = path.basename(img);
             if (fileName != null && visited.has(fileName)) {
               continue;
@@ -223,7 +227,7 @@ statusDownloadQueue.process(concurrency, async (job) => {
             imgIds.push(imgInfo.id);
             newImageDownloadJob({
               url: img,
-              parent: post.id,
+              parent: parentDir,
               imageId: imgInfo.id
             });
           }
@@ -265,6 +269,42 @@ imageDownloadQueue.process(concurrency, async (job) => {
     throw err;
   })
 });
+
+// galleryDlLoadingQueue.process(async (job) => {
+//   const data = job.data as GalleryDLLoadingJob;
+//   const dirPath = data.path;
+//   const info = `start loading ${data.path} ...`;
+//   job.log(info);
+//   const stat = await fs.stat(dirPath);
+//   if (!stat.isDirectory()) {
+//     job.log(`error: ${data.path} is not a directory`);
+//     return;
+//   }
+//   // list all files in the directory
+//   const files = await fs.readdir(dirPath);
+//   for (const file of files) {
+//     const filePath = path.join(dirPath, file);
+//     const stat = await fs.stat(filePath);
+//     if (stat.isDirectory()) {
+//       job.log(`skip directory ${filePath}`);
+//       continue;
+//     } else if (filePath.endsWith(".json")) {
+//       const content = await fs.readFile(filePath, "utf-8");
+//       const post = JSON.parse(content);
+//         await storePost(parsedPost, {
+//           source: Source.Archive,
+//           userName: post.userName,
+//           info: {
+//             id: post.id,
+//             original: post.tweetUrl,
+//             timestamp: post.date
+//           },
+//           downloadMode: DownloadMode.Normal
+//         });
+//       }
+//     }
+//   }
+// });
 
 function isFetchFailed(error: Error) {
   return error.message.match("fetch failed");

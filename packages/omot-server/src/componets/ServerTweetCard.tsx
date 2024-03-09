@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 
 function ServerTweetCard({ tweet, user }: DisplayTweet) {
   const mode = useColorScheme();
-  const content = tweet.repliesToOriginalId == null
+  const content = tweet.repliesToUserName == null
     ? tweet.content 
     : `Replying to @${tweet.repliesToUserName}:\n${tweet.content}`;
   // some hack here, tweet.date will be string in ssr

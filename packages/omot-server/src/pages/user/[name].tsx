@@ -4,6 +4,7 @@ import { logger } from "@/logger";
 import { getImageUrl, processImages, ssrConvert } from "@/util";
 import prisma from "@/util/db";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
+import { useEffect } from 'react';
 
 type Props = {
   tweets: DisplayTweet[]
@@ -12,15 +13,35 @@ type Props = {
 export default function User({
   tweets,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+
+  useEffect(() => {
+    if (window.location.hash) {
+      const element = document.querySelector(window.location.hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
+
   return (
   <MainLayout>
     <Timeline tweets={tweets} />
   </MainLayout>);
 }
 
+function processShowReply(showReply: string | string[] | undefined) {
+  if (showReply == null) {
+    return false;
+  } else if (typeof showReply === "string") {
+    return showReply === "true";
+  } else {
+    return showReply[0] === "true";
+  }
+}
+
 export const getServerSideProps = (async (context) => {
   const userName = context.params?.name;
-  const showReply = context.query?.showReply ?? false;
+  const showReply = processShowReply(context.query.showReply);
   if (userName == null) {
     throw new Error("userName is null");
   } else if (typeof userName !== "string") {
@@ -54,7 +75,8 @@ export const getServerSideProps = (async (context) => {
     where: {
       userId: userId,
       ...(!showReply && {
-        repliesToOriginalId: null
+        repliesToOriginalId: null,
+        repliesToUserName: null
       })
     },
     include: {
@@ -84,7 +106,7 @@ export const getServerSideProps = (async (context) => {
           fullName: "",
           postId: -1
         }),
-        ...(t.userAvatar?.img?.s3id && { avatarUrl: getImageUrl(t.userAvatar.img) })
+        ...(t.userAvatar?.img?.dir && { avatarUrl: getImageUrl(t.userAvatar.img) })
       }
     }
   });

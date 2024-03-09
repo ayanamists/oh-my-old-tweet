@@ -1,6 +1,6 @@
 import { logger } from "@/logger";
 import { Image } from "@prisma/client";
-import config from "../../config/config";
+import MediaStorage from "@/workers/media";
 
 export function inDateRange(date: Date, start: Date, end: Date) {
   return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
@@ -21,7 +21,7 @@ export function ssrConvert(data: any) {
 export function processImages(images: Image[]) {
   const imgs = [];
   for (const img of images) {
-    if (img.s3id == null || img.width == null || img.height == null) {
+    if (img.dir == null || img.name == null || img.width == null || img.height == null) {
       logger.warn(`Image is not valid: ${img.id}, may be not downloaded yet`)
     } else {
       imgs.push({
@@ -35,5 +35,6 @@ export function processImages(images: Image[]) {
 }
 
 export function getImageUrl(image: Image) {
-  return config.minio.getUrl(image.s3id);
+  if (image.dir == null || image.name == null) return "";
+  return MediaStorage.getRelativePath(image.dir, image.name);
 }

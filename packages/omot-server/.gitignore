@@ -37,4 +37,8 @@ next-env.d.ts
 
 # data for development
 service/minio-data
-service/postgres-data
+service/search-data
+service/db-data
+service/temp-data
+
+deploy/

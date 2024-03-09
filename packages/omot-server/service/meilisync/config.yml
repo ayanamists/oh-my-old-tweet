@@ -1,0 +1,21 @@
+progress:
+  type: file
+
+source:
+  type: mysql 
+  host: omot-db
+  port: 3306
+  database: omot_db
+  user: root
+  password: example
+
+meilisearch:
+  api_url: http://search:7700/
+  api_key: MASTER_KEY
+  insert_size: 1000
+  insert_interval: 10
+
+sync:
+  - table: Post
+    index: postIndex
+    full: true

@@ -29,6 +29,10 @@ export type ImageDownloadJob = {
   imageId: number 
 }
 
+export type GalleryDLLoadingJob = {
+  path: string
+}
+
 export type ProcessedPost = Post & {
   imageIds: number[],
   avatarId?: number

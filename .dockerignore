@@ -1,0 +1,10 @@
+*.log
+.DS_Store
+.github
+node_modules
+.next
+build
+dist
+packages/omot-server/service
+packages/omot-server/deploy
+

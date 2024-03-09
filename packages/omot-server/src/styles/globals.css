@@ -1,0 +1,27 @@
+.ais-Highlight-nonHighlighted {
+  color: var(--mui-palette-text-primary);
+}
+
+li.ais-Hits-item {
+  background-color: var(--mui-palette-common-background);
+  border: 1px solid var(--mui-palette-grey-300);
+  line-break: anywhere;
+}
+
+li.ais-InfiniteHits-item {
+  background-color: var(--mui-palette-common-background);
+  border: 1px solid var(--mui-palette-grey-300);
+  line-break: anywhere;
+}
+
+
+mark.ais-Highlight-highlighted {
+  background-color: var(--mui-palette-secondary-main);
+  color: var(--mui-palette-secondary-contrastText);
+}
+
+div.ais-SearchBox {
+  margin-top: 20px;
+  border-radius: 10px;
+  width: 60%;
+}

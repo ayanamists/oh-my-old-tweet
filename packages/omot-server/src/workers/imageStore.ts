@@ -1,14 +1,11 @@
 import Queue from 'bull';
 import { ImageDownloadJob } from '.';
-import { Client, ClientOptions } from 'minio';
-import config from '../../config/config';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { fileTypeFromBuffer } from 'file-type';
 import sizeOf from 'image-size';
 import prisma from '@/util/db';
-
-const minioClient = new Client(config.minio as unknown as ClientOptions);
+import MediaStorage from './media';
 
 // Function to get the image file name
 async function getImageFileName(url: string, responseHeaders: Headers, buffer: ArrayBuffer) {
@@ -39,26 +36,39 @@ export async function downloadImage(job: Queue.Job<ImageDownloadJob>) {
   const parent = data.parent;
   const imageId = data.imageId;
 
+  // first check if the image is already downloaded
+  const check = await prisma.image.findUnique({
+    where: {
+      id: imageId,
+    },
+  });
+  if (check?.name != null && check?.dir != null 
+    && MediaStorage.exists(check.dir, check.name)) {
+    job.log(`Image ${imageId} already downloaded, skipping...`);
+    job.progress(100);
+    return;
+  }
+
   const response = await fetch(url);
+  const status = response.status;
+  if (status === 404) {
+    job.log(`Image ${url} not found, skipping...`);
+    job.progress(100);
+    return;
+  }
   const buffer = await response.arrayBuffer();
   const responseHeaders = response.headers;
   const imageFileName = await getImageFileName(url, responseHeaders, buffer);
-  const fileName = `${parent}/${imageFileName}`;
-  const bucket = config.minio.buckets.myBucket;
   const buf = Buffer.from(buffer);
   const dimensions = sizeOf(buf);
-  await minioClient.putObject(bucket, fileName, buf);
 
-  const successInfo = `Downloaded ${data.url} and uploaded as ${imageFileName} to MinIO`;
+  MediaStorage.save(buf, parent, imageFileName);
+  const successInfo = `Downloaded ${data.url}, name: ${imageFileName}`;
   job.log(successInfo);
 
-  const s3id = JSON.stringify({
-    bucket: bucket,
-    object: fileName,
-  });
   const update = {
     id: imageId,
-    s3id: s3id,
+    dir: parent,
     name: imageFileName,
     width: dimensions.width,
     height: dimensions.height,
@@ -70,6 +80,6 @@ export async function downloadImage(job: Queue.Job<ImageDownloadJob>) {
     data: update,
   });
 
-  job.log(`Updated image ${imageId} with ${s3id}, result: ${result}`);
+  job.log(`Updated image ${imageId} with, result: ${result.dir}/${result.name}`);
   job.progress(100);
 }

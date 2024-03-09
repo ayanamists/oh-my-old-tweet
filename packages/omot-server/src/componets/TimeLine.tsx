@@ -21,7 +21,7 @@ export default function Timeline({ tweets }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isiPad = useMediaQuery('(max-width: 1372px)');
-  const mw = isMobile ? '100%' : (isiPad ? '60vw' : '40vw');
+  const mw = isMobile ? '100vw' : (isiPad ? '60vw' : '40vw');
   return (<Box sx={{
     padding: 0,
     width: mw
@@ -32,7 +32,7 @@ export default function Timeline({ tweets }: Props) {
       {tweets.map((tweet) => (
         <ListItem key={tweet.tweet.id} sx={{
           padding: 0,
-        }}>
+        }} id={`tweet${tweet.tweet.originalId}`}>
           <ServerTweetCard tweet={tweet.tweet} user={tweet.user} />
         </ListItem>
       ))}

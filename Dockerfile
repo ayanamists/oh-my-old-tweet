@@ -28,6 +28,8 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 # ENV NEXT_TELEMETRY_DISABLED 1
 RUN mv packages/omot-server/.env.prod packages/omot-server/.env
+RUN yarn workspace react-tweet-card build;
+RUN yarn workspace twitter-data-parser build;
 RUN yarn workspace omot-server prisma generate;
 RUN yarn workspace omot-server build;
 

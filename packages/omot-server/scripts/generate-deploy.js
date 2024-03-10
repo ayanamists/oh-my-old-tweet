@@ -1,6 +1,9 @@
 import fs from 'fs';
+import { exec } from 'child_process';
 
-// clean all files in the deploy folder
+if (fs.existsSync('deploy')) {
+  fs.rmdirSync('deploy', { recursive: true });
+}
 fs.mkdirSync('deploy');
 
 fs.mkdirSync('deploy/db-init');
@@ -14,3 +17,13 @@ fs.copyFileSync('service/nginx/nginx.prod.conf', 'deploy/nginx/nginx.conf');
 
 fs.copyFileSync('.env.user', 'deploy/.env');
 fs.copyFileSync('service/docker-compose.prod.yml', 'deploy/docker-compose.yml');
+
+// zip the deploy folder
+exec('zip -r deploy.zip deploy', (err, stdout, stderr) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+  console.log(stdout);
+  console.error(stderr);
+});

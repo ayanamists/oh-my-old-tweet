@@ -2,7 +2,7 @@ version: '3'
 
 services:
   omot:
-    image: omot-temp
+    image: ghcr.io/ayanamists/oh-my-old-tweet:release
     volumes:
       - "${MEDIA_STORAGE}:/opt/media"
 

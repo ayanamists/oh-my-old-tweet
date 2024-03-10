@@ -7,4 +7,5 @@ build
 dist
 packages/omot-server/service
 packages/omot-server/deploy
+packages/omot-server/deploy.zip
 

@@ -23,7 +23,7 @@ export default function UserList({ users }: UserListProps) {
               sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
             >
               <TableCell scope="row">
-                <Link href={`/user/${row.userName}`}>{row.userName}</Link>
+                <Link href={`/user/${row.userName}?originalId=${row.originalId}`}>{row.userName}</Link>
               </TableCell>
               <TableCell align="left">{row.fullName}</TableCell>
               <TableCell align="left">{

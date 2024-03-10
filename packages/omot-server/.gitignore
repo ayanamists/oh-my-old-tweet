@@ -42,3 +42,4 @@ service/db-data
 service/temp-data
 
 deploy/
+deploy.zip

@@ -1,6 +1,5 @@
 import Timeline, { DisplayTweet } from "@/componets/TimeLine";
 import MainLayout from "@/layouts/MainLayout";
-import { logger } from "@/logger";
 import { getImageUrl, processImages, ssrConvert } from "@/util";
 import prisma from "@/util/db";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
@@ -39,9 +38,18 @@ function processShowReply(showReply: string | string[] | undefined) {
   }
 }
 
+function processOriginalId(originalId: string | string[] | undefined) {
+  if (typeof originalId === "string") {
+    return originalId;
+  } else {
+    return undefined;
+  }
+}
+
 export const getServerSideProps = (async (context) => {
   const userName = context.params?.name;
   const showReply = processShowReply(context.query.showReply);
+  const originalId = processOriginalId(context.query.originalId);
   if (userName == null) {
     throw new Error("userName is null");
   } else if (typeof userName !== "string") {
@@ -53,9 +61,10 @@ export const getServerSideProps = (async (context) => {
         some: {
           userName: {
             userName: userName
-          }
+          },
         }
-      }
+      },
+      ...(originalId && { originalId })
     },
   });
   if (users.length === 0) {
@@ -65,9 +74,14 @@ export const getServerSideProps = (async (context) => {
         destination: fallback,
         permanent: false
       }
-    }
+    };
   } else if (users.length > 1) {
-    logger.warn(`Many user found: ${users.map(u => u.id)}`)
+    return {
+      redirect: {
+        destination: `/user?userName=${userName}`,
+        permanent: false
+      }
+    };
   }
   const user = users[0];
   const userId = user.id;

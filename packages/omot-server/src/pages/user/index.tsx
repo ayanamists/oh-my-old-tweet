@@ -2,15 +2,21 @@ import UserList, { UserListProps } from "@/componets/UserList";
 import MainLayout from "@/layouts/MainLayout";
 import prisma from '@/util/db'
 import { ssrConvert } from '@/util'
+import { GetServerSideProps } from "next";
 
-export default function allUser({ users } : UserListProps) {
+export default function allUser({ users }: UserListProps) {
   return (<MainLayout>
-    <UserList users={users}/>
+    <UserList users={users} />
   </MainLayout>)
 }
 
 
-export async function getServerSideProps() {
+export const getServerSideProps = (async (context) => {
+  const userNameQuery = context.query.name;
+  let userName = undefined;
+  if (typeof userNameQuery === "string") {
+    userName = userNameQuery;
+  }
   const userList = await prisma.user.findMany({
     orderBy: {
       lastModified: "desc"
@@ -23,7 +29,16 @@ export async function getServerSideProps() {
           userName: true
         },
       }
-    }
+    },
+    ...(userName && {
+      where: {
+        posts: {
+          some: {
+            userName: { userName }
+          }
+        }
+      }
+    })
   });
   return {
     props: {
@@ -33,4 +48,4 @@ export async function getServerSideProps() {
       }))
     }
   }
-}
+}) satisfies GetServerSideProps<UserListProps>;

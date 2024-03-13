@@ -21,4 +21,4 @@ jobs:
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: packages/oh-my-old-tweet/build # The folder the action should deploy.
+          folder: packages/oh-my-old-tweet/dist # The folder the action should deploy.

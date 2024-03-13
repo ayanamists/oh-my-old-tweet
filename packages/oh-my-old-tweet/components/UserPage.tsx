@@ -1,7 +1,8 @@
+"use client";
 import { useEffect } from 'react';
-import { Timeline } from '../Timeline';
 import { useParams, useNavigate } from 'react-router-dom';
-import MainLayout from '../Layout/MainLayout';
+import MainLayout from 'src/Layout/MainLayout';
+import { Timeline } from 'src/Timeline';
 
 export default function Page() {
   const { user } = useParams();

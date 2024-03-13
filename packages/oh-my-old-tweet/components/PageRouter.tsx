@@ -1,11 +1,10 @@
-import './App.css';
-import MainPage from './pages/MainPage';
-import UserPage from './pages/UserPage';
-import StatusPage from './pages/StatusPage';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+"use client"
+import { Routes, Route, HashRouter } from 'react-router-dom';
+import MainPage from './MainPage';
+import StatusPage from './StatusPage';
+import UserPage from './UserPage';
 
-
-function App() {
+export default function App() {
   return (
     <HashRouter>
       <Routes>
@@ -16,5 +15,3 @@ function App() {
     </HashRouter>
   );
 }
-
-export default App;

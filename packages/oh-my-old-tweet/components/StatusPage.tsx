@@ -1,6 +1,8 @@
+"use client";
 import { useParams } from 'react-router-dom';
-import MainLayout from '../Layout/MainLayout';
-import { LoadableTCard } from '../LoadableTCard';
+import { LoadableTCard } from 'src/LoadableTCard';
+import MainLayout from 'src/Layout/MainLayout';
+
 
 export default function Page() {
   const { timestamp, user, id } = useParams();

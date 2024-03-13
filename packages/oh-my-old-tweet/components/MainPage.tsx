@@ -1,7 +1,11 @@
+"use client";
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { parseUserName } from '../InputParser';
-import MainLayout from '../Layout/MainLayout';
+import { parseUserName } from '../src/InputParser';
+import dynamic from 'next/dynamic';
+
+const MainLayout = dynamic(() => import('../src/Layout/MainLayout'), { ssr: false });
 
 function MarkBox({ text }: { text: string }) {
   return <mark className="px-2 text-white bg-tw-blue text-white rounded">{text}</mark>

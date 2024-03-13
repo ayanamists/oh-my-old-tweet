@@ -17,7 +17,8 @@ jobs:
         uses: borales/actions-yarn@v4
         with:
           cmd: build # will run `yarn build:prod` command
-
+      - name: Disable Jekyll
+        run: touch packages/oh-my-old-tweet/dist/.nojekyll
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:

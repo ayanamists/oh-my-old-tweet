@@ -12,7 +12,7 @@ export default function allUser({ users }: UserListProps) {
 
 
 export const getServerSideProps = (async (context) => {
-  const userNameQuery = context.query.name;
+  const userNameQuery = context.query.userName;
   let userName = undefined;
   if (typeof userNameQuery === "string") {
     userName = userNameQuery;

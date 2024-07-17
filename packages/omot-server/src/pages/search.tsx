@@ -2,10 +2,9 @@ import 'instantsearch.css/themes/satellite.css';
 import { InstantSearch, SearchBox, Highlight, InfiniteHits } from 'react-instantsearch';
 import searchClient from '@/util/search';
 import MainLayout from '@/layouts/MainLayout';
-import { Box,  Button,  useMediaQuery, useTheme, } from '@mui/material';
-import Link from 'next/link';
+import { Box,  Button,  useMediaQuery, useTheme, Link } from '@mui/material';
 
-const Hit = ({ hit }: {hit:any}) => { 
+const Hit = ({ hit }: {hit:any}) => {
   const tweetUrl = hit.tweetUrl;
   const splited = tweetUrl.split('/');
   const userName = splited[splited.indexOf('status') - 1];
@@ -13,7 +12,8 @@ const Hit = ({ hit }: {hit:any}) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isiPad = useMediaQuery('(max-width: 1372px)');
   const mw = isMobile ? '100%' : (isiPad ? '60vw' : '40vw');
-  const computedLink = `/user/${userName}/?showReply=${hit.repliesToOriginalId == null ? "false" : "true"}#tweet${hit.originalId}`;
+  const computedUserLink = `/user/${userName}/?userId=${hit.userId}`;
+  const computedLink = `/user/${userName}/?userId=${hit.userId}&showReply=${hit.repliesToOriginalId == null ? "false" : "true"}#tweet${hit.originalId}`;
   return (<Box width={mw}>
     <Highlight attribute="content" hit={hit} highlightedTagName="mark" />
     <Box display={'flex'} sx={{
@@ -23,7 +23,7 @@ const Hit = ({ hit }: {hit:any}) => {
       padding: '0.5em 0',
     }}>
     <Box>
-      From: <Link href={`/user/${userName}`} >{userName}</Link>
+      From: <Link href={computedUserLink} >{userName}</Link>
     </Box>
     <Button variant='contained' sx={{width:"50%"}} href={computedLink}>
       GOTO

@@ -46,8 +46,17 @@ function processOriginalId(originalId: string | string[] | undefined) {
   }
 }
 
+function processUserId(userId: string | string[] | undefined) {
+  if (typeof userId === "string") {
+    return Number.parseInt(userId);
+  } else {
+    return undefined;
+  }
+}
+
 export const getServerSideProps = (async (context) => {
   const userName = context.params?.name;
+  const _userId = processUserId(context.query.userId);
   const showReply = processShowReply(context.query.showReply);
   const originalId = processOriginalId(context.query.originalId);
   if (userName == null) {
@@ -64,7 +73,8 @@ export const getServerSideProps = (async (context) => {
           },
         }
       },
-      ...(originalId && { originalId })
+      ...(originalId && { originalId }),
+      ...(_userId && { id: _userId })
     },
   });
   if (users.length === 0) {

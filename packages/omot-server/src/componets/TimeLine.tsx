@@ -87,7 +87,7 @@ export default function Timeline({ tweets, start }: Props) {
     }}>
       <VList style={{
         height: '85vh',
-        width: mw,
+        width: '100vw'
        }}
        ref={ref}
        onRangeChange={(start) => {
@@ -99,6 +99,8 @@ export default function Timeline({ tweets, start }: Props) {
        {_tweets.map((tweet) => (
          <ListItem key={tweet.tweet.id} sx={{
            padding: 0,
+           width: mw,
+           margin: 'auto'
          }} id={`tweet${tweet.tweet.originalId}`}>
           <ServerTweetCard tweet={tweet.tweet} user={tweet.user} />
          </ListItem>

@@ -42,7 +42,8 @@
     "react-tweet-card": "^0.2.5",
     "twitter-data-parser": "^1.0.0",
     "undici": "^5.28.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "virtua": "^0.33.7"
   },
   "devDependencies": {
     "@types/bull": "^4.10.0",

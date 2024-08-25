@@ -25,6 +25,8 @@ import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
 import SearchIcon from '@mui/icons-material/Search';
 import Drawer from '@mui/material/Drawer';
+import Switch from  '@mui/material/Switch';
+import { TweetContext, TweetDispatchContext } from '@/contexts/TweetContext';
 
 type MainLayoutProps = {
   children: React.ReactNode,
@@ -94,7 +96,8 @@ function ToggleColorModeButton() {
 }
 
 // eslint-disable-next-line no-unused-vars
-function ButtonAppBar({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void } ) {
+function ButtonAppBar() {
+  const [open, setOpen] = React.useState(false);
   const theme = useTheme();
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -189,11 +192,62 @@ function ButtonAppBar({ open, setOpen }: { open: boolean, setOpen: (open: boolea
             </ListItem>
           ))}
         </List>
+      <Divider />
+      <SettingsList />
       </Drawer>
     </Box>
   );
 }
 
+function SettingsList() {
+  const settings = React.useContext(TweetContext);
+  const dispatch = React.useContext(TweetDispatchContext);
+  return (<>
+    <ListItem>
+      <ListItemText id="switch-list-label-coding" primary="Show Reply" />
+      <Switch
+        edge="end"
+        inputProps={{
+          'aria-labelledby': 'switch-list-label-coding',
+        }}
+        onChange={() => {
+          dispatch && dispatch({ type: 'showReply', payload: !settings?.showReply })
+        }}
+        checked={settings?.showReply}
+      />
+    </ListItem>
+
+    <ListItem>
+      <ListItemText id="switch-list-label-coding" primary="Show Image Only" />
+      <Switch
+        edge="end"
+        inputProps={{
+          'aria-labelledby': 'switch-list-label-coding',
+        }}
+        onChange={() => {
+          dispatch && dispatch({ type: 'onlyShowImage', payload: !settings?.onlyShowImage })
+        }}
+        checked={settings?.onlyShowImage}
+      />
+    </ListItem>
+  </>);
+}
+
+interface TweetSettings {
+  showReply: boolean;
+  onlyShowImage: boolean;
+}
+
+interface TweetSettingAction {
+  type: 'showReply' | 'onlyShowImage',
+  payload: boolean
+}
+
+function dispatchTweetSettings(state: TweetSettings, action: TweetSettingAction): TweetSettings {
+  const t = action.type;
+  const v = action.payload;
+  return { ...state, [t] : v }
+}
 
 function MainLayout({ children }: MainLayoutProps) {
   const theme = React.useMemo(() => extendTheme({
@@ -208,11 +262,13 @@ function MainLayout({ children }: MainLayoutProps) {
     },
   }), []);
 
-  const [open, setOpen] = React.useState(false);
+  const [tweetSettings, dispatch] = React.useReducer(dispatchTweetSettings, { showReply: false, onlyShowImage: false});
   return (
+    <TweetContext.Provider value={tweetSettings}>
+    <TweetDispatchContext.Provider value={dispatch}>
     <CssVarsProvider theme={theme}>
       <CssBaseline />
-      <ButtonAppBar open={open} setOpen={setOpen} />
+      <ButtonAppBar />
       <Box component="main" color={'inherit'}>
         <Toolbar />
         <Box minHeight={'80vh'}
@@ -224,6 +280,8 @@ function MainLayout({ children }: MainLayoutProps) {
         </Box>
       </Box>
     </CssVarsProvider>
+    </TweetDispatchContext.Provider>
+    </TweetContext.Provider>
   );
 }
 

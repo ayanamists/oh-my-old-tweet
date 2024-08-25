@@ -3,40 +3,31 @@ import MainLayout from "@/layouts/MainLayout";
 import { getImageUrl, processImages, ssrConvert } from "@/util";
 import prisma from "@/util/db";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
-import { useEffect } from 'react';
 
 type Props = {
   tweets: DisplayTweet[]
+  showReply: boolean
 }
 
 export default function User({
   tweets,
+  start,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
-
-  useEffect(() => {
-    if (window.location.hash) {
-      const element = document.querySelector(window.location.hash);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, []);
-
   return (
   <MainLayout>
-    <Timeline tweets={tweets} />
+    <Timeline tweets={tweets} start={start ?? 0} />
   </MainLayout>);
 }
 
-function processShowReply(showReply: string | string[] | undefined) {
-  if (showReply == null) {
-    return false;
-  } else if (typeof showReply === "string") {
-    return showReply === "true";
-  } else {
-    return showReply[0] === "true";
-  }
-}
+/* function processShowReply(showReply: string | string[] | undefined) {
+*   if (showReply == null) {
+*     return false;
+*   } else if (typeof showReply === "string") {
+*     return showReply === "true";
+*   } else {
+*     return showReply[0] === "true";
+*   }
+* } */
 
 function processOriginalId(originalId: string | string[] | undefined) {
   if (typeof originalId === "string") {
@@ -54,11 +45,19 @@ function processUserId(userId: string | string[] | undefined) {
   }
 }
 
+function processTweetId(start: string | string[] | undefined) {
+  if (typeof start === "string") {
+    return start
+  } else {
+    return undefined;
+  }
+}
+
 export const getServerSideProps = (async (context) => {
   const userName = context.params?.name;
   const _userId = processUserId(context.query.userId);
-  const showReply = processShowReply(context.query.showReply);
   const originalId = processOriginalId(context.query.originalId);
+    const tweetId = processTweetId(context.query.tweetId);
   if (userName == null) {
     throw new Error("userName is null");
   } else if (typeof userName !== "string") {
@@ -98,10 +97,6 @@ export const getServerSideProps = (async (context) => {
   const posts = await prisma.post.findMany({
     where: {
       userId: userId,
-      ...(!showReply && {
-        repliesToOriginalId: null,
-        repliesToUserName: null
-      })
     },
     include: {
       images: true,
@@ -134,9 +129,12 @@ export const getServerSideProps = (async (context) => {
       }
     }
   });
+  const start = (tweetId != null) ? tweets.findIndex((t) => t.tweet.originalId === tweetId) : null;
+  console.log(`start : ${start}`);
   return {
     props: {
-      tweets: ssrConvert(tweets)
+      tweets: ssrConvert(tweets),
+      start,
     }
   };
 }) satisfies GetServerSideProps<{

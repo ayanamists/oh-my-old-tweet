@@ -13,7 +13,7 @@ const Hit = ({ hit }: {hit:any}) => {
   const isiPad = useMediaQuery('(max-width: 1372px)');
   const mw = isMobile ? '100%' : (isiPad ? '60vw' : '40vw');
   const computedUserLink = `/user/${userName}/?userId=${hit.userId}`;
-  const computedLink = `/user/${userName}/?userId=${hit.userId}&showReply=${hit.repliesToOriginalId == null ? "false" : "true"}#tweet${hit.originalId}`;
+  const computedLink = `/user/${userName}/?userId=${hit.userId}&tweetId=${hit.originalId}#tweet${hit.originalId}`;
   return (<Box width={mw}>
     <Highlight attribute="content" hit={hit} highlightedTagName="mark" />
     <Box display={'flex'} sx={{
@@ -23,7 +23,7 @@ const Hit = ({ hit }: {hit:any}) => {
       padding: '0.5em 0',
     }}>
     <Box>
-      From: <Link href={computedUserLink} >{userName}</Link>
+      From: <Link href={computedUserLink}>{userName}</Link>
     </Box>
     <Button variant='contained' sx={{width:"50%"}} href={computedLink}>
       GOTO

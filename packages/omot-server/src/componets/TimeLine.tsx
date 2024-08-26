@@ -47,13 +47,17 @@ function useTweets(tweets: DisplayTweet[], focus: MutableRefObject<FocusElem>):
 
   return useMemo(() => {
     const _tweets = tweets.filter(p);
+    if (_tweets.length === 0) {
+      return [_tweets, { id: "", idx: 0 }];
+    }
+
     const zToCurrent = tweets.slice(0, tweets.findIndex(t =>
       t.tweet != null && t.tweet.originalId === focus.current.id) + 1);
     const lived = zToCurrent.filter(p);
     const newIdx = lived.length === 0 ? 0 : lived.length - 1;
-    console.log(`old focus: ${focus.current.idx}, new: ${newIdx}`);
-    focus.current = { id: lived[newIdx].tweet.originalId, idx: newIdx }
-    return [_tweets, focus.current];
+    const newId = lived.length === 0 ? _tweets[0].tweet.originalId : lived[newIdx].tweet.originalId;
+    // console.log(`old focus: ${focus.current.idx}, new: ${newIdx}`);
+    return [_tweets, { id: newId, idx: newIdx }];
   }, [focus, p, tweets]);
 }
 
@@ -77,6 +81,7 @@ export default function Timeline({ tweets, start }: Props) {
   const focus = useRef({ id: tweets[start].tweet.originalId, idx: start });
   const [idx, setIdx] = useState(start);
   const [_tweets, _focus] = useTweets(tweets, focus);
+  focus.current = _focus;
   if (_focus.idx !== idx) {
     setIdx(_focus.idx);
   }

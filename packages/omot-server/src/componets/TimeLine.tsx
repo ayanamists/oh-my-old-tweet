@@ -38,13 +38,17 @@ function useTweets(tweets: DisplayTweet[], focus: MutableRefObject<FocusElem>):
   const showReply = settings?.showReply;
   const onlyShowImage = settings?.onlyShowImage;
   const p = useCallback((t: DisplayTweet) =>
-    (implies(!showReply ?? true, t.tweet.repliesToOriginalId == null)) &&
-      (implies(onlyShowImage ?? false, t.tweet.images != null && t.tweet.images?.length !== 0)),
+    t.tweet != null &&
+    (implies(!showReply ?? true,
+             t.tweet.repliesToOriginalId == null && t.tweet.repliesToUserName == null))
+      && (implies(onlyShowImage ?? false,
+                  t.tweet.images != null && t.tweet.images?.length !== 0)),
     [showReply, onlyShowImage]);
 
   return useMemo(() => {
     const _tweets = tweets.filter(p);
-    const zToCurrent = tweets.slice(0, tweets.findIndex(t => t.tweet.originalId === focus.current.id) + 1);
+    const zToCurrent = tweets.slice(0, tweets.findIndex(t =>
+      t.tweet != null && t.tweet.originalId === focus.current.id) + 1);
     const lived = zToCurrent.filter(p);
     const newIdx = lived.length === 0 ? 0 : lived.length - 1;
     console.log(`old focus: ${focus.current.idx}, new: ${newIdx}`);
@@ -53,6 +57,7 @@ function useTweets(tweets: DisplayTweet[], focus: MutableRefObject<FocusElem>):
   }, [focus, p, tweets]);
 }
 
+// TODO: iOS have some problem, related to <Toolbar /> in MainLayout
 export default function Timeline({ tweets, start }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -86,8 +91,8 @@ export default function Timeline({ tweets, start }: Props) {
       padding: 0,
     }}>
       <VList style={{
-        height: '85vh',
-        width: '100vw'
+        width: '100vw',
+        height: 'calc(100vh - 64px)'
        }}
        ref={ref}
        onRangeChange={(start) => {

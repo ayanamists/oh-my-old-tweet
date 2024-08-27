@@ -13,7 +13,7 @@ const Hit = ({ hit }: {hit:any}) => {
   const isiPad = useMediaQuery('(max-width: 1372px)');
   const mw = isMobile ? '100%' : (isiPad ? '60vw' : '40vw');
   const computedUserLink = `/user/${userName}/?userId=${hit.userId}`;
-  const computedLink = `/user/${userName}/?userId=${hit.userId}&originalId=${hit.originalId}`;
+  const computedLink = `/user/${userName}/?userId=${hit.userId}&tweetId=${hit.originalId}`;
   return (<Box width={mw}>
     <Highlight attribute="content" hit={hit} highlightedTagName="mark" />
     <Box display={'flex'} sx={{

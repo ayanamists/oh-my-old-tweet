@@ -57,7 +57,7 @@ export const getServerSideProps = (async (context) => {
   const userName = context.params?.name;
   const _userId = processUserId(context.query.userId);
   const originalId = processOriginalId(context.query.originalId);
-    const tweetId = processTweetId(context.query.tweetId);
+  const tweetId = processTweetId(context.query.tweetId);
   if (userName == null) {
     throw new Error("userName is null");
   } else if (typeof userName !== "string") {

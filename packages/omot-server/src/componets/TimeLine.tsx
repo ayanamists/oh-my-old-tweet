@@ -1,6 +1,7 @@
 "use client";
 
 import { Post, User, UserName } from "@prisma/client";
+import { useQueryState } from "nuqs"
 import ServerTweetCard from "./ServerTweetCard";
 import { Box, List, ListItem, useMediaQuery, useTheme } from "@mui/material";
 import { VList, VListHandle } from "virtua";
@@ -61,6 +62,15 @@ function useTweets(tweets: DisplayTweet[], focus: MutableRefObject<FocusElem>):
   }, [focus, p, tweets]);
 }
 
+function renewFoucs(focus: MutableRefObject<FocusElem>,
+                    newFocus: FocusElem,
+                    // eslint-disable-next-line no-unused-vars
+                    post: (_: FocusElem) => void) {
+  focus.current.id = newFocus.id;
+  focus.current.idx = newFocus.idx;
+  post(focus.current);
+}
+
 // TODO: iOS have some problem, related to <Toolbar /> in MainLayout
 export default function Timeline({ tweets, start }: Props) {
   const theme = useTheme();
@@ -81,8 +91,14 @@ export default function Timeline({ tweets, start }: Props) {
   const focus = useRef({ id: tweets[start].tweet.originalId, idx: start });
   const [idx, setIdx] = useState(start);
   const [_tweets, _focus] = useTweets(tweets, focus);
-  focus.current = _focus;
+  // eslint-disable-next-line no-unused-vars
+  const [_, setQueryStart] = useQueryState('tweetId');
+  const syncWithQuery = useCallback((focus: FocusElem) => {
+    if (typeof window == 'undefined') return
+    setQueryStart(focus.id);
+  }, [setQueryStart]);
   if (_focus.idx !== idx) {
+    renewFoucs(focus, _focus, syncWithQuery);
     setIdx(_focus.idx);
   }
   useEffect(() => {
@@ -102,8 +118,9 @@ export default function Timeline({ tweets, start }: Props) {
        ref={ref}
        onRangeChange={(start) => {
          const newIdx = start + 1 >= _tweets.length ? _tweets.length - 1 : start + 1;
-         focus.current.id = _tweets[newIdx].tweet.originalId;
-         focus.current.idx = newIdx;
+         const newFocus = {id: _tweets[newIdx].tweet.originalId,
+                           idx: newIdx};
+         renewFoucs(focus, newFocus, syncWithQuery);
          // console.log(`new focus: ${focus.current.idx}`)
        }}>
        {_tweets.map((tweet) => (

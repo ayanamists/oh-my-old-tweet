@@ -34,6 +34,7 @@
     "minio": "^7.1.3",
     "next": "14.0.1",
     "next-connect": "^1.0.0-next.4",
+    "nuqs": "^1.17.8",
     "pino": "^8.16.2",
     "pino-pretty": "^10.2.3",
     "react": "^18",

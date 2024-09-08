@@ -19,7 +19,7 @@ type LoadingProps = {
 
 export default function Loading({ userName, falseRedirect }: LoadingProps) {
   const [archiveOrgChecked, setArchiveOrgChecked] = useState(true);
-  // eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, setTwitterChecked] = useState(false);
   const [user, setUser] = useState(userName);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -171,10 +171,11 @@ export default function Loading({ userName, falseRedirect }: LoadingProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<{}> = async (context) => {
-  const userName = context.query?.userName ?? "";
-  const falseRedirect = context.query?.falseRedirect ?? false;
-  return {
-    props: { userName, falseRedirect }
+export const getServerSideProps: GetServerSideProps<object> =
+  async (context) => {
+    const userName = context.query?.userName ?? "";
+    const falseRedirect = context.query?.falseRedirect ?? false;
+    return {
+      props: { userName, falseRedirect }
+    }
   }
-}

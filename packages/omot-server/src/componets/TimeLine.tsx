@@ -91,7 +91,7 @@ export default function Timeline({ tweets, start }: Props) {
   const focus = useRef({ id: tweets[start].tweet.originalId, idx: start });
   const [idx, setIdx] = useState(start);
   const [_tweets, _focus] = useTweets(tweets, focus);
-  // eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, setQueryStart] = useQueryState('tweetId');
   const syncWithQuery = useCallback((focus: FocusElem) => {
     if (typeof window == 'undefined') return

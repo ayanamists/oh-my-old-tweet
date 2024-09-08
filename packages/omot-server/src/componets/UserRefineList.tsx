@@ -18,7 +18,8 @@ function CustomRefinementList() {
   } = useRefinementList({
     attribute: 'userId',
     showMore: true,
-    limit: 10
+    limit: 20,
+    showMoreLimit: 50
   });
 
   const [userNames, setUserNames] = useState<UserIdToName>(new Map());

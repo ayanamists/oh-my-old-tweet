@@ -11,31 +11,35 @@ import { TextField, Box, Button, IconButton } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { DateTime } from 'luxon';
 import UserRefineList from '@/componets/UserRefineList';
-import { instantMeiliSearch } from  "@meilisearch/instant-meilisearch";
+import { instantMeiliSearch } from "@meilisearch/instant-meilisearch";
+import { MeiliSearch } from 'meilisearch'
 
-// FIXME There're so many hack and workaround when querying backend
+// FIXME There're so many hack and workaround when calling backend
 // FIXME Correctly layout for moblie
 
 const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
 const host = typeof window !== 'undefined' ? window.location.host : 'localhost';
 const { searchClient } =
   instantMeiliSearch(`${protocol}//${host}/api/meilisearch/`, "MASTER_KEY");
-/* const meiliClient = new MeiliSearch({
-*   host: `${protocol}//${host}/api/meilisearch/`,
-*   apiKey: "MASTER_KEY"
-* }); */
+const meiliClient = new MeiliSearch({
+  host: `${protocol}//${host}/api/meilisearch/`,
+  apiKey: "MASTER_KEY"
+});
 
-// ensure filterable attrs
-/* if (typeof window !== 'undefined') {
-*   const indexedAttrs = await meiliClient.index('postIndex').getFilterableAttributes();
-*   // console.log(await meiliClient.index('postIndex').getFilterableAttributes());
-*   const needIndexedAttrs = ['date', 'userId'];
-*   if (needIndexedAttrs.map((attr) => !indexedAttrs.includes(attr))
-*     .reduce((a, b) => a || b)) {
-*     console.log(`update meilisearch attr: ${needIndexedAttrs}`);
-*     await meiliClient.index('postIndex').updateFilterableAttributes(needIndexedAttrs);
-*   }
-* } */
+async function check() {
+  if (typeof window !== 'undefined') {
+    const indexedAttrs = await meiliClient.index('postIndex').getFilterableAttributes();
+    // console.log(await meiliClient.index('postIndex').getFilterableAttributes());
+    const needIndexedAttrs = ['date', 'userId'];
+    if (needIndexedAttrs.map((attr) => !indexedAttrs.includes(attr))
+      .reduce((a, b) => a || b)) {
+      console.log(`update meilisearch attr: ${needIndexedAttrs}`);
+      await meiliClient.index('postIndex').updateFilterableAttributes(needIndexedAttrs);
+    }
+  }
+}
+
+check();
 
 const Hit = ({ hit }: { hit: any }) => {
   const theme = useTheme();
@@ -110,7 +114,7 @@ function Search() {
         overflowY: 'auto'
       }}>
         <UserRefineList />
-     </Box>
+      </Box>
       <Box sx={{
       }}>
         <Box sx={{
@@ -135,7 +139,7 @@ function SearchBox() {
   return (
     <TextField id="search-box" label="Search" variant="filled"
       onInput={e => {
-      // @ts-expect-error I don't know why tsc cannot check this, it's correct
+        // @ts-expect-error I don't know why tsc cannot check this, it's correct
         refine(e.target.value);
       }}
       fullWidth

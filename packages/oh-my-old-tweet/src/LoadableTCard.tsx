@@ -19,7 +19,7 @@ export function LoadableTCard({ user, cdxItem }: {
   return (<div ref={elementRef}>
     {
       (post === false || post === true || (! showReply && post?.replyInfo != null)
-        || (post != null && (post.user.userName ?? "") !== user))? null :
+        || (post != null && (post.user.userName?.toLowerCase() ?? "") !== user.toLocaleLowerCase()))? null :
         (post == null)
           ? <div style={{ height: '200px' }} 
             className="text-black dark:text-white text-center flex flex-col item-center justify-center">

@@ -1,5 +1,5 @@
 import { CorsProxyConfig, getUrl } from "./corsUrl";
-import { getCdxItemUrl, getCdxItemId, parsePost, Post } from "twitter-data-parser"
+import { getCdxItemUrl, parsePost, Post, parseCdxItem } from "twitter-data-parser"
 
 export function getCdxList(config: CorsProxyConfig, user: string) {
   const req = `twitter.com/${user}/`
@@ -10,23 +10,26 @@ export function getCdxList(config: CorsProxyConfig, user: string) {
 
 export interface MinimalCdxInfo {
   timestamp: string;
+  mimetype: string;
   id: string;
   origUrl: string;
 };
 
 export function getArchivePageUrl(cdxItem: MinimalCdxInfo) {
+  if (cdxItem.mimetype === 'application/json') {
+    return `https://web.archive.org/web/${cdxItem.timestamp}if_/${cdxItem.origUrl}`;
+  }
   return `https://web.archive.org/web/${cdxItem.timestamp}/${cdxItem.origUrl}`;
 }
 
 export function getShareLink(user: string, cdxItem: MinimalCdxInfo) {
   const baseUrl = `${window.location.protocol}//${window.location.host}`;
-  return `${baseUrl}/#/status/${user}/${cdxItem.timestamp}/${cdxItem.id}`;
+  return `${baseUrl}/#/status/${user}/${cdxItem.timestamp}/${cdxItem.id}/?mimetype=${encodeURIComponent(cdxItem.mimetype)}`;
 }
 
 export function fromCdxItem(cdxItem: string[]): MinimalCdxInfo {
   return {
-    timestamp: cdxItem[1],
-    id: getCdxItemId(cdxItem),
+    ...(parseCdxItem(cdxItem)),
     origUrl: getCdxItemUrl(cdxItem)
   };
 }

@@ -1,3 +1,4 @@
+import { safeParsePost } from "./JsonDataParser";
 import { parseDOM } from "./PolyfillDOMParser";
 import { Post, ReplyInfo } from "./Post";
 import { getWarn } from "./Utils";
@@ -22,7 +23,24 @@ export function getArchiveUrl({ id, timestamp, userName }: ArchiveTweetInfo) {
   return `https://web.archive.org/web/${timestamp}/${getTweetUrlById(userName, id)}`;
 }
 
-export function parsePost(html: string, { id, timestamp, userName }: ArchiveTweetInfo) {
+export function parsePost(data: string, { id, timestamp, userName }: ArchiveTweetInfo) : Post | undefined {
+  try {
+    const jsonData = JSON.parse(data);
+    const parsed = safeParsePost(jsonData);
+    if (parsed != null) {
+      return {
+        ...parsed,
+        archiveUrl: getArchiveUrl({ id, timestamp, userName })
+      };
+    } else {
+      return undefined;
+    }
+  } catch (_) {
+    return parseHtmlPost(data, { id, timestamp, userName });
+  }
+}
+
+export function parseHtmlPost(html: string, { id, timestamp, userName }: ArchiveTweetInfo) {
   const doc = parseDOM(html);
 
   const lang = doc.getElementsByTagName('html')[0].getAttribute('lang') ?? "en";
@@ -45,7 +63,6 @@ export function parsePost(html: string, { id, timestamp, userName }: ArchiveTwee
     if (metaTag != null) {
       return extractFromMetaTag(metaTag, internalInfo);
     } else {
-      console.warn(getWarn(`Cannot find possible extraction method. url: ${pageUrl}.`));
       return;
     }
   }
@@ -283,7 +300,7 @@ function toHttps(url: string) {
   return urlObj.toString();
 }
 
-function fixImageUrl(url: string, info: ArchiveTweetInfo1) {
+function fixImageUrl(url: string, info: { timestamp: string }) {
   const urlObj = new URL(url);
   if (urlObj.hostname !== "web.archive.org") {
     return `https://web.archive.org/web/${info.timestamp}im_/${url}`

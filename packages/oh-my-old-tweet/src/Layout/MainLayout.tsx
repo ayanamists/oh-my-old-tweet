@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -8,28 +10,59 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CheckIcon from '@mui/icons-material/Check';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import HelpIcon from '@mui/icons-material/Help';
-import { Button, CssBaseline, Divider, Drawer, FormControl, InputLabel, Link, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
+import { Button, CssBaseline, Divider, Drawer, FormControl, FormControlLabel, FormGroup, InputLabel, Link, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
 import { ThemeProvider } from '@emotion/react';
 import { ConfigContext } from '../context/ConfigContext';
-import { CorsProxyConfig, defaultConfig, getDefaultConfig, saveToLocal } from '../corsUrl';
-import { ShowReplyContext, ShowReplyContextProvider } from '../context/ShowReplyContext';
+import { CorsProxyConfig, defaultConfig, saveToLocal } from '../corsUrl';
+import { FilterContext, TweetFilter } from 'src/context/FilterContext';
+import CheckBox from '@mui/material/Checkbox';
 
 type MainLayoutProps = {
   children: React.ReactNode,
 };
 
+function setIncludeContent(tweetFilter: TweetFilter, content: "reply" | "post", value: boolean) {
+  const newContent = [...tweetFilter.contentBelongTo];
+  if (value) {
+    if (!newContent.includes(content)) {
+      newContent.push(content);
+    }
+  } else {
+    const index = newContent.indexOf(content);
+    if (index !== -1) {
+      newContent.splice(index, 1);
+    }
+  }
+  return newContent;
+}
+
 function SideBar() {
-  const initConfig = React.useContext(ConfigContext);
-  const [mode, setMode] = React.useState(initConfig.mode);
-  const [prefix, setPrefix] = React.useState(initConfig.prefix);
-  const [coding, setCoding] = React.useState(initConfig.urlEncoding);
-  const { showReply, toggleShowReply } = React.useContext(ShowReplyContext);
-  const setConfig = (config: CorsProxyConfig) => {
-    initConfig.mode = config.mode;
-    initConfig.prefix = config.prefix;
-    initConfig.urlEncoding = config.urlEncoding;
-    saveToLocal(initConfig);
+  const { config, setConfig } = React.useContext(ConfigContext);
+  const initConfig = config!;
+  const { tweetFilter, setTweetFilter } = React.useContext(FilterContext);
+  const [prefix, setPrefix] = React.useState<string>(initConfig.prefix);
+  const _setConfig = (config: CorsProxyConfig) => {
+    setConfig(config);
+    setPrefix(config.prefix);
+    saveToLocal(config);
   };
+  const includeReply = tweetFilter.contentBelongTo.includes("reply");
+  const includePost = tweetFilter.contentBelongTo.includes("post");
+  const toggleIncludeReply = (value) => {
+    const newContent = setIncludeContent(tweetFilter, "reply", value);
+    setTweetFilter({
+      ...tweetFilter,
+      contentBelongTo: newContent
+    });
+  };
+  const toggleIncludePost = (value) => {
+    const newContent = setIncludeContent(tweetFilter, "post", value);
+    setTweetFilter({
+      ...tweetFilter,
+      contentBelongTo: newContent
+    });
+  };
+
   return (<>
     <List>
       <ListItem>
@@ -43,19 +76,17 @@ function SideBar() {
             <InputLabel id="mode-select-label">Mode</InputLabel>
             <Select placeholder="Choose one…"
               labelId="mode-select-label"
-              value={mode}
+              value={config!.mode}
               label="mode"
               onChange={(e) => {
                 let v = e.target.value;
                 const intValue = Number.parseInt(v.toString());
-                setMode(intValue);
                 const newConfig = intValue === 1 ? defaultConfig : {
                   ...initConfig,
                   mode: intValue,
                   prefix: intValue === 2 ? "" : initConfig.prefix
                 };
-                setPrefix(newConfig.prefix);
-                setConfig(newConfig);
+                _setConfig(newConfig);
               }}
             >
               <MenuItem value={1}>Cloudflare</MenuItem>
@@ -68,16 +99,11 @@ function SideBar() {
       <ListItem>
         <TextField fullWidth label="Proxy URL" id="ProxyUrl" onChange={(e) => {
           setPrefix(e.target.value);
-          setConfig({
-            ...initConfig,
-            mode: 3,
-            prefix: e.target.value
-          })
         }}
           value={prefix}
         />
         <IconButton edge="end" aria-label="comments" onClick={() => {
-          setConfig({
+          _setConfig({
             ...initConfig,
             prefix: prefix,
           })
@@ -94,14 +120,13 @@ function SideBar() {
             'aria-labelledby': 'switch-list-label-coding',
           }}
           onChange={() => {
-            const codingNew = !coding
-            setCoding(codingNew);
-            setConfig({
+            const codingNew = !config!.urlEncoding;
+            _setConfig({
               ...initConfig,
               urlEncoding: codingNew
             })
           }}
-          checked={coding}
+          checked={config!.urlEncoding}
         />
       </ListItem>
     </List>
@@ -135,14 +160,30 @@ function SideBar() {
       </ListItem>
 
       <ListItem>
-        <ListItemText id="switch-list-label-reply" primary="Show Replies" />
+        <FormGroup>
+          <FormControlLabel
+            control={<CheckBox checked={includeReply} onChange={(event) => { toggleIncludeReply(event.target.checked) }} />}
+            label="Include Replies" />
+          <FormControlLabel
+            control={<CheckBox checked={includePost} onChange={(event) => { toggleIncludePost(event.target.checked) }} />}
+            label="Include Posts" />
+        </FormGroup>
+      </ListItem>
+
+      <ListItem>
+        <ListItemText id="switch-list-label-images" primary="Show Images Only" />
         <Switch
           edge="end"
           inputProps={{
-            'aria-labelledby': 'switch-list-label-reply',
+            'aria-labelledby': 'switch-list-label-images',
           }}
-          onChange={toggleShowReply}
-          checked={showReply}
+          onChange={() => {
+            setTweetFilter({
+              ...tweetFilter,
+              mustContainImage: !tweetFilter.mustContainImage,
+            });
+          }}
+          checked={tweetFilter.mustContainImage}
         />
       </ListItem>
     </List>
@@ -222,24 +263,20 @@ function MainLayout({ children }: MainLayoutProps) {
     [prefersDarkMode]);
 
   return (
-    <ConfigContext.Provider value={getDefaultConfig()}>
-      <ShowReplyContextProvider>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <ButtonAppBar />
-          <Box component="main" color={'inherit'}>
-            <Toolbar />
-            <Box minHeight={'80vh'}
-              justifyItems={'center'}
-              justifyContent={'center'}
-              alignItems={'center'}
-              sx={{ display: 'grid' }}>
-              {children}
-            </Box>
-          </Box>
-        </ThemeProvider>
-      </ShowReplyContextProvider>
-    </ConfigContext.Provider>);
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <ButtonAppBar />
+      <Box component="main" color={'inherit'}>
+        <Toolbar />
+        <Box minHeight={'80vh'}
+          justifyItems={'center'}
+          justifyContent={'center'}
+          alignItems={'center'}
+          sx={{ display: 'grid' }}>
+          {children}
+        </Box>
+      </Box>
+    </ThemeProvider>);
 }
 
 export default MainLayout;

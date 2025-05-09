@@ -32,7 +32,7 @@ function Timeline1({ user }: { user: string }) {
   const [lst, setLst] = useState<JSX.Element[]>([]);
   const cdxList = useRef<string[][] | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const config = useContext(ConfigContext);
+  const { config } = useContext(ConfigContext);
   const [isInitLoading, setIsInitLoading] = useState(true);
   const { showBoundary } = useErrorBoundary();
   const page = useRef(0);
@@ -54,14 +54,14 @@ function Timeline1({ user }: { user: string }) {
     }
   }
   useEffect(() => {
-    getCdxList(config, user).then((data) => {
+    getCdxList(config!, user).then((data) => {
       cdxList.current = filterUniqueCdxItems(data);
       fetchData();
       setIsInitLoading(false);
     }).catch((e) => {
       showBoundary(e);
     });
-  }, []);
+  }, [config, user, showBoundary]);
 
   // TODO: fix empty logic
   return ((isInitLoading) ? <LoadingCircle /> :

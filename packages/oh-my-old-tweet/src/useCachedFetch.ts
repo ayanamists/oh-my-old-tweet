@@ -17,7 +17,7 @@ function parseStorageItem(str: string): Post | boolean {
 }
 
 const useCachedFetch = (cdxItem: MinimalCdxInfo, setData: (p: Post | boolean) => void) => {
-  const config = useContext(ConfigContext);
+  const { config } = useContext(ConfigContext);
   useEffect(() => {
     const id = cdxItem.id;
     const item = localStorage.getItem(id);
@@ -25,7 +25,7 @@ const useCachedFetch = (cdxItem: MinimalCdxInfo, setData: (p: Post | boolean) =>
       setData(parseStorageItem(item));
     } else {
       (async () => {
-        await (getOnePage(config, cdxItem).then((response) => {
+        await (getOnePage(config!, cdxItem).then((response) => {
           try {
             localStorage.setItem(id, JSON.stringify({ data: response }));
           } catch (err) {

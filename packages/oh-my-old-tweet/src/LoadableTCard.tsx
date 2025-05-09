@@ -46,11 +46,13 @@ export function LoadableTCard({ user, cdxItem, onProfileLoaded }: {
 
   if (loading) {
     return (
-      <Paper sx={{ p: 2, my: 2, display: 'flex', justifyContent: 'center' }}>
-        <Typography variant="caption" className="text-gray-500 dark:text-gray-400">
-          Loading from archive : {cdxItem.origUrl}
-        </Typography>
-        <CircularProgress size={24} />
+      <Paper sx={{ p: 2, my: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Typography variant="caption" className="text-gray-500 dark:text-gray-400" sx={{ mb: 1 }}>
+            Loading from archive : {cdxItem.origUrl}
+          </Typography>
+          <CircularProgress size={24} />
+        </Box>
       </Paper>
     );
   }

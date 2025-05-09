@@ -144,7 +144,7 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
 
   const avatarRegion = mainRegion.querySelector('img.avatar');
   const avatar = filterValidAvatar(avatarRegion?.getAttribute('src'), info);
-  const profileInfo = extractProfileInfo(mainRegion.ownerDocument);
+  const profileInfo = extractProfileInfo(mainRegion.ownerDocument, info);
 
   const videoThumbDiv = mainRegion.querySelector('div.PlayableMedia-player');
   const videoThumbUrlWithQuote = videoThumbDiv?.getAttribute('style')?.match(/url\((.+)\)/)?.[1];
@@ -218,7 +218,7 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
   };
 }
 
-function extractProfileInfo(document: Document): ProfileInfo | undefined {
+function extractProfileInfo(document: Document, info: ArchiveTweetInfo1): ProfileInfo | undefined {
   const bioElement = document.querySelector('.ProfileHeaderCard-bio');
   const locationElement = document.querySelector('.ProfileHeaderCard-locationText');
   const bigAvatarElement = document.querySelector('.ProfileAvatar-image');
@@ -230,8 +230,9 @@ function extractProfileInfo(document: Document): ProfileInfo | undefined {
 
   const text = bioElement.textContent?.trim() || '';
   const location = locationElement?.textContent?.trim() || undefined;
-  const bigAvatar = bigAvatarElement?.getAttribute('src') || undefined;
-  const image = profileImageElement?.getAttribute('src') || undefined;
+  const bigAvatar = filterValidAvatar(bigAvatarElement?.getAttribute('src'), info) || undefined;
+  const _image = profileImageElement?.getAttribute('src') || undefined;
+  const image = _image ? fixImageUrl(_image, info) : undefined;
   const joined = joinedElement?.getAttribute('title') || undefined;
 
   const urls: string[] = [];

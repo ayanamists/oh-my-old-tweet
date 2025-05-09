@@ -1,11 +1,13 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { filterUniqueCdxItems, getCdxItemId } from "twitter-data-parser";
-import { getCdxList, fromCdxItem } from "./Data";
+import { CdxItem } from "twitter-data-parser";
+import { getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import { ConfigContext } from "./context/ConfigContext";
 import { ErrorBoundary, useErrorBoundary, } from "react-error-boundary";
 import { Box, CircularProgress, List, ListItem, Typography } from "@mui/material";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { FilterContext } from "./context/FilterContext";
+import { DateTime } from "luxon";
 
 function LoadingCircle() {
   return (<CircularProgress size={60} />);
@@ -30,19 +32,22 @@ function fallbackRender({ error }: { error: Error }) {
 
 function Timeline1({ user }: { user: string }) {
   const [lst, setLst] = useState<JSX.Element[]>([]);
-  const cdxList = useRef<string[][] | null>(null);
+  const cdxList = useRef<CdxItem[] | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const { config } = useContext(ConfigContext);
   const [isInitLoading, setIsInitLoading] = useState(true);
   const { showBoundary } = useErrorBoundary();
   const page = useRef(0);
   const pageSize = 30;
-  const updateLst = useCallback((cdxData) => {
-    const l = cdxData.map((i) =>
-      <LoadableTCard user={user} cdxItem={fromCdxItem(i)} key={getCdxItemId(i)} />);
-    setLst(lst => lst.concat(l));
+  const updateLst = useCallback((cdxData, init: boolean) => {
+    const l = cdxData.map((i: CdxItem) =>
+      <LoadableTCard user={user} cdxItem={{ ... i, origUrl: i.original }} key={i.id} />);
+    setLst(lst => init ? l : lst.concat(l));
   }, []);
-  const fetchData = () => {
+  const fetchData = (init: boolean) => {
+    if (init) {
+      page.current = 0;
+    }
     if (cdxList.current == null) return; // that should not happen
     const pageNow = page.current;
     if (pageNow * pageSize >= cdxList.current.length) {
@@ -50,24 +55,27 @@ function Timeline1({ user }: { user: string }) {
     } else {
       const nextData = cdxList.current.slice(pageNow * pageSize, (pageNow + 1) * pageSize);
       page.current += 1;
-      updateLst(nextData);
+      updateLst(nextData, init);
     }
   }
+  const { tweetFilter } = useContext(FilterContext);
+  const { dateInRange } = tweetFilter;
   useEffect(() => {
-    getCdxList(config!, user).then((data) => {
-      cdxList.current = filterUniqueCdxItems(data);
-      fetchData();
+    getCdxList(config!, user, dateInRange).then((data) => {
+      cdxList.current = data.filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)));
+      console.log(cdxList.current);
+      fetchData(true);
       setIsInitLoading(false);
     }).catch((e) => {
       showBoundary(e);
     });
-  }, [config, user, showBoundary]);
+  }, [config, user, showBoundary, dateInRange]);
 
   // TODO: fix empty logic
   return ((isInitLoading) ? <LoadingCircle /> :
     <InfiniteScroll
       dataLength={lst.length}
-      next={fetchData}
+      next={() => fetchData(false)}
       hasMore={hasMore}
       loader={null}
       endMessage={null}

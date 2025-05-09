@@ -1,14 +1,12 @@
-import { DateTime } from "luxon";
+import { DateTime, Interval } from "luxon";
 import { createContext, useState } from "react";
 
-type ContentType = "reply" | "post"
-
-type DateOrAny = DateTime | "any"
+export type ContentType = "reply" | "post"
 
 export interface TweetFilter {
   contentBelongTo: ContentType[]
   mustContainImage: boolean
-  dateInRange: [DateOrAny, DateOrAny]
+  dateInRange: Interval
 }
 
 interface FilterContext {
@@ -19,7 +17,7 @@ interface FilterContext {
 const initFilter: TweetFilter = {
   contentBelongTo: ["reply", "post"],
   mustContainImage: false,
-  dateInRange: ["any", "any"]
+  dateInRange: Interval.fromDateTimes(DateTime.fromISO('2006-03-21'), DateTime.now())
 };
 
 export const FilterContext = createContext<FilterContext>(

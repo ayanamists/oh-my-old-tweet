@@ -17,9 +17,7 @@ import { CorsProxyConfig, defaultConfig, saveToLocal } from '../corsUrl';
 import { FilterContext, TweetFilter } from 'src/context/FilterContext';
 import CheckBox from '@mui/material/Checkbox';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
-import { DateTime } from 'luxon';
+import { DateTime, Interval } from 'luxon';
 
 type MainLayoutProps = {
   children: React.ReactNode,
@@ -68,27 +66,35 @@ function SideBar() {
   };
 
   // Handle date range filter
-  const startDate = tweetFilter.dateInRange[0] === "any" ? null : tweetFilter.dateInRange[0];
-  const endDate = tweetFilter.dateInRange[1] === "any" ? null : tweetFilter.dateInRange[1];
+  const startDate = tweetFilter.dateInRange.start;
+  const endDate = tweetFilter.dateInRange.end;
 
-  const handleStartDateChange = (newDate: DateTime | null) => {
+  const handleStartDateChange = (newDate: DateTime) => {
+    const newInterval = Interval.fromDateTimes(newDate, tweetFilter.dateInRange.end as DateTime);
+    if (!newInterval.isValid) {
+      return;
+    }
     setTweetFilter({
       ...tweetFilter,
-      dateInRange: [newDate || "any", tweetFilter.dateInRange[1]]
+      dateInRange: newInterval
     });
   };
 
-  const handleEndDateChange = (newDate: DateTime | null) => {
+  const handleEndDateChange = (newDate: DateTime) => {
+    const newInterval = Interval.fromDateTimes(tweetFilter.dateInRange.start as DateTime, newDate);
+    if (!newInterval.isValid) {
+      return;
+    }
     setTweetFilter({
       ...tweetFilter,
-      dateInRange: [tweetFilter.dateInRange[0], newDate || "any"]
+      dateInRange: newInterval
     });
   };
 
   const clearDateRange = () => {
     setTweetFilter({
       ...tweetFilter,
-      dateInRange: ["any", "any"]
+      dateInRange: Interval.fromDateTimes(DateTime.fromISO('2006-03-21'), DateTime.now())
     });
   };
 
@@ -215,45 +221,42 @@ function SideBar() {
           checked={tweetFilter.mustContainImage}
         />
       </ListItem>
-      
+
       <ListItem>
         <Typography variant='subtitle2'>
           Date Range Filter
         </Typography>
       </ListItem>
-      
+
       <ListItem>
-        <LocalizationProvider dateAdapter={AdapterLuxon}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
-            <DatePicker
-              label="Start Date"
-              value={startDate}
-              onChange={handleStartDateChange}
-              slotProps={{
-                textField: { fullWidth: true, size: 'small' },
-              }}
-            />
-            <DatePicker
-              label="End Date"
-              value={endDate}
-              onChange={handleEndDateChange}
-              slotProps={{
-                textField: { fullWidth: true, size: 'small' },
-              }}
-            />
-            <Button 
-              variant="outlined" 
-              size="small" 
-              onClick={clearDateRange}
-              sx={{ alignSelf: 'flex-end' }}
-            >
-              Clear Date Range
-            </Button>
-          </Box>
-        </LocalizationProvider>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+          <DatePicker
+            label="Start Date"
+            value={startDate}
+            onChange={handleStartDateChange}
+            slotProps={{
+              textField: { fullWidth: true, size: 'small' },
+            }}
+          />
+          <DatePicker
+            label="End Date"
+            value={endDate}
+            onChange={handleEndDateChange}
+            slotProps={{
+              textField: { fullWidth: true, size: 'small' },
+            }}
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={clearDateRange}
+            sx={{ alignSelf: 'flex-end' }}
+          >
+            Clear Date Range
+          </Button>
+        </Box>
       </ListItem>
     </List>
-
   </>
   );
 }

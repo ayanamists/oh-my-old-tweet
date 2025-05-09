@@ -10,7 +10,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CheckIcon from '@mui/icons-material/Check';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import HelpIcon from '@mui/icons-material/Help';
-import { Button, CssBaseline, Divider, Drawer, FormControl, FormControlLabel, FormGroup, InputLabel, Link, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, createTheme, useMediaQuery } from '@mui/material';
+import { Button, CssBaseline, Divider, Drawer, FormControl, FormControlLabel, FormGroup, InputLabel, Link, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, Tooltip, createTheme, useMediaQuery } from '@mui/material';
 import { ThemeProvider } from '@emotion/react';
 import { ConfigContext } from '../context/ConfigContext';
 import { CorsProxyConfig, defaultConfig, saveToLocal } from '../corsUrl';
@@ -18,6 +18,7 @@ import { FilterContext, TweetFilter } from 'src/context/FilterContext';
 import CheckBox from '@mui/material/Checkbox';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { DateTime, Interval } from 'luxon';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 type MainLayoutProps = {
   children: React.ReactNode,
@@ -223,15 +224,20 @@ function SideBar() {
       </ListItem>
 
       <ListItem>
-        <Typography variant='subtitle2'>
+        <Typography variant='subtitle2' sx={{ mr: 1 }}>
           Date Range Filter
         </Typography>
+        <Tooltip title="This filter applies to when Archive.org captured the page, NOT the original tweet date. It filters tweets based on when they were archived." arrow placement="right">
+          <IconButton size="small" color="primary">
+            <HelpOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </ListItem>
 
       <ListItem>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
           <DatePicker
-            label="Start Date"
+            label="Start Date (Archive Capture)"
             value={startDate}
             onChange={handleStartDateChange}
             slotProps={{
@@ -239,21 +245,25 @@ function SideBar() {
             }}
           />
           <DatePicker
-            label="End Date"
+            label="End Date (Archive Capture)"
             value={endDate}
             onChange={handleEndDateChange}
             slotProps={{
               textField: { fullWidth: true, size: 'small' },
             }}
           />
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={clearDateRange}
-            sx={{ alignSelf: 'flex-end' }}
-          >
-            Clear Date Range
-          </Button>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            <Typography variant="caption" color="text.secondary">
+              *Filters by archive.org capture date
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={clearDateRange}
+            >
+              Clear Date Range
+            </Button>
+          </Box>
         </Box>
       </ListItem>
     </List>

@@ -53,40 +53,20 @@ function UserProfile({ profile, profileDate, onPrevProfile, onNextProfile, hasNe
   }
 
   const profileInfo = profile.profileInfo;
-  const hasBigAvatar = profileInfo?.bigAvatar !== undefined;
+  const avatarUrl = profileInfo?.bigAvatar || profile?.avatar;
 
   return (
     <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-        {hasBigAvatar ? (
-          <img 
-            src={profileInfo.bigAvatar} 
-            alt={profile.fullName}
-            style={{ 
-              width: 120, 
-              height: 120, 
-              marginBottom: 16, 
-              borderRadius: '50%',
-              objectFit: 'cover'
-            }}
-            onError={(e) => {
-              // Fallback to regular avatar if big avatar fails to load
-              e.currentTarget.style.display = 'none';
-              const fallbackAvatar = document.getElementById(`fallback-avatar-${profile.userName}`);
-              if (fallbackAvatar) fallbackAvatar.style.display = 'block';
-            }}
-          />
-        ) : null}
-        
-        <Avatar 
-          id={`fallback-avatar-${profile.userName}`}
-          src={profile.avatar} 
+
+        <Avatar
+          id={`avatar-${profile.userName}`}
+          src={avatarUrl}
           alt={profile.fullName}
           sx={{ 
             width: 120, 
             height: 120, 
             mb: 2,
-            display: hasBigAvatar ? 'none' : 'block' // Only show if no big avatar
           }}
         />
         

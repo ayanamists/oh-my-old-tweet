@@ -1,4 +1,10 @@
-import { User } from "./User";
+export type User = {
+  fullName?: string;
+  avatar?: string;
+  userName?: string;
+  id?: string;
+  profileInfo?: ProfileInfo;
+}
 
 export type ReplyInfo = {
   targetPostId?: string,
@@ -19,4 +25,11 @@ export interface Post {
   archiveUrl: string;
   replyInfo?: ReplyInfo;
   videoInfo?: VideoInfo;
+}
+
+export interface ProfileInfo {
+  text: string;
+  image?: string;
+  followers?: number;
+  following?: number;
 }

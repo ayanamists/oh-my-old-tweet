@@ -1,7 +1,7 @@
 import { safeParsePost } from "./JsonDataParser";
 import { parseDOM } from "./PolyfillDOMParser";
-import { Post, ReplyInfo } from "./Post";
 import { getWarn } from "./Utils";
+import { Post, ReplyInfo } from "./types";
 
 export type ArchiveTweetInfo = {
   id: string;

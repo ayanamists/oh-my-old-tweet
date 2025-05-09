@@ -1,5 +1,4 @@
-import { User } from "./User";
-import { Post } from "./Post";
+import { Post, User } from "./types";
 
 export function parseUser(userJson: any): User {
   if (

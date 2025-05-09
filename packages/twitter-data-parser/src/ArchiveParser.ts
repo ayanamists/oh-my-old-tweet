@@ -1,7 +1,7 @@
 import { safeParsePost } from "./JsonDataParser";
 import { parseDOM } from "./PolyfillDOMParser";
 import { getWarn } from "./Utils";
-import { Post, ReplyInfo } from "./types";
+import { Post, ReplyInfo, ProfileInfo } from "./types";
 
 export type ArchiveTweetInfo = {
   id: string;
@@ -113,6 +113,7 @@ function extractFromMetaTag(metaTag: Element, info: ArchiveTweetInfo1): Post | u
   const avatarRegion = div.querySelector('div[data-testid="Tweet-User-Avatar"]');
   const avatar = filterValidAvatar(avatarRegion?.querySelector('img')?.getAttribute('src'), info);
 
+
   return {
     user: {
       userName: userName,
@@ -143,6 +144,7 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
 
   const avatarRegion = mainRegion.querySelector('img.avatar');
   const avatar = filterValidAvatar(avatarRegion?.getAttribute('src'), info);
+  const profileInfo = extractProfileInfo(mainRegion.ownerDocument);
 
   const videoThumbDiv = mainRegion.querySelector('div.PlayableMedia-player');
   const videoThumbUrlWithQuote = videoThumbDiv?.getAttribute('style')?.match(/url\((.+)\)/)?.[1];
@@ -202,7 +204,8 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
       userName: userName,
       fullName: name,
       avatar: avatar,
-      id: userId
+      id: userId,
+      profileInfo: profileInfo,
     },
     id: info.id,
     text: text,
@@ -212,6 +215,40 @@ function extractFromMainRegion(mainRegion: Element, info: ArchiveTweetInfo1): Po
     date: time,
     replyInfo: replyInfo,
     ...(videoThumbUrl && { videoInfo: { thumbUrl: videoThumbUrl } })
+  };
+}
+
+function extractProfileInfo(document: Document): ProfileInfo | undefined {
+  const bioElement = document.querySelector('.ProfileHeaderCard-bio');
+  const locationElement = document.querySelector('.ProfileHeaderCard-locationText');
+  const bigAvatarElement = document.querySelector('.ProfileAvatar-image');
+  const urlElement = document.querySelector('.ProfileHeaderCard-urlText a');
+  const profileImageElement = document.querySelector('.ProfileCanopy-headerBg img');
+  const joinedElement = document.querySelector('.ProfileHeaderCard-joinDateText');
+
+  if (!bioElement) return undefined;
+
+  const text = bioElement.textContent?.trim() || '';
+  const location = locationElement?.textContent?.trim() || undefined;
+  const bigAvatar = bigAvatarElement?.getAttribute('src') || undefined;
+  const image = profileImageElement?.getAttribute('src') || undefined;
+  const joined = joinedElement?.getAttribute('title') || undefined;
+
+  const urls: string[] = [];
+  if (urlElement && urlElement.getAttribute('href')) {
+    const href = urlElement.getAttribute('href') || '';
+    // Extract the actual URL, not the archive URL
+    const urlMatch = href.match(/https:\/\/web\.archive\.org\/web\/\d+\/(https?:\/\/.+)/);
+    urls.push(urlMatch ? urlMatch[1] : href);
+  }
+
+  return {
+    text,
+    location,
+    bigAvatar,
+    image,
+    joined,
+    urls: urls.length > 0 ? urls : undefined
   };
 }
 

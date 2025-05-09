@@ -30,6 +30,10 @@ export interface Post {
 export interface ProfileInfo {
   text: string;
   image?: string;
+  bigAvatar?: string;
+  location?: string;
+  urls?: string[];
   followers?: number;
   following?: number;
+  joined?: string;
 }

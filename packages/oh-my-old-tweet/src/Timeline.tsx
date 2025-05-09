@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { CdxItem } from "twitter-data-parser";
+import { CdxItem, User } from "twitter-data-parser";
 import { getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import { ConfigContext } from "./context/ConfigContext";
@@ -12,7 +12,6 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import LinkIcon from '@mui/icons-material/Link';
-import { ProfileInfo, User } from "twitter-data-parser/src/types";
 
 function LoadingCircle() {
   return (<CircularProgress size={60} />);
@@ -47,7 +46,7 @@ interface UserProfileProps {
 function UserProfile({ profile, profileDate, onPrevProfile, onNextProfile, hasNext, hasPrev }: UserProfileProps) {
   if (!profile) {
     return (
-      <Paper sx={{ p: 2, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Paper sx={{ p: 2, height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography variant="body1">No profile information available</Typography>
       </Paper>
     );
@@ -160,11 +159,11 @@ function Timeline1({ user }: { user: string }) {
           if (post.user && post.user.profileInfo) {
             setProfiles(prevProfiles => {
               // Check if we already have this profile (by username and profile text)
-              const exists = prevProfiles.some(p => 
-                p.userName === post.user.userName && 
+              const exists = prevProfiles.some(p =>
+                p.userName === post.user.userName &&
                 p.profileInfo?.text === post.user.profileInfo?.text
               );
-              
+
               if (!exists) {
                 return [...prevProfiles, post.user];
               }
@@ -225,9 +224,14 @@ function Timeline1({ user }: { user: string }) {
 
   // TODO: fix empty logic
   return ((isInitLoading) ? <LoadingCircle /> :
-    <Grid container spacing={3} sx={{ width: '100%', maxWidth: '1200px', mx: 'auto', px: 2 }}>
-      <Grid item xs={12} md={4} lg={3} sx={{ display: { xs: 'none', md: 'block' } }}>
-        <UserProfile 
+    <Grid container spacing={3} sx={{ width: '100%', maxWidth: '1000px', mx: 'auto', px: 2 }}>
+      <Grid item xs={12} md={3} lg={4} sx={{
+        display: { xs: 'none', md: 'block' },
+        height: "80vh",
+        top: 100,
+        position: 'sticky'
+      }}>
+        <UserProfile
           profile={profiles.length > 0 ? profiles[currentProfileIndex] : null}
           profileDate={profileDate}
           onPrevProfile={handlePrevProfile}
@@ -236,7 +240,7 @@ function Timeline1({ user }: { user: string }) {
           hasNext={currentProfileIndex < profiles.length - 1}
         />
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid item xs={12} md={8} lg={8}>
         <InfiniteScroll
           dataLength={lst.length}
           next={() => fetchData(false)}
@@ -244,9 +248,7 @@ function Timeline1({ user }: { user: string }) {
           loader={null}
           endMessage={null}
         >
-          <div className="min-h-screen w-full">
-            {lst}
-          </div>
+          {lst}
         </InfiniteScroll>
       </Grid>
     </Grid>

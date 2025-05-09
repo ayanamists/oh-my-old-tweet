@@ -4,10 +4,15 @@ import { getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import { ConfigContext } from "./context/ConfigContext";
 import { ErrorBoundary, useErrorBoundary, } from "react-error-boundary";
-import { Box, CircularProgress, List, ListItem, Typography } from "@mui/material";
+import { Box, CircularProgress, List, ListItem, Typography, Paper, Avatar, IconButton, Grid, Divider, Link as MuiLink } from "@mui/material";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { FilterContext } from "./context/FilterContext";
 import { DateTime } from "luxon";
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import LinkIcon from '@mui/icons-material/Link';
+import { ProfileInfo, User } from "twitter-data-parser/src/types";
 
 function LoadingCircle() {
   return (<CircularProgress size={60} />);
@@ -30,6 +35,106 @@ function fallbackRender({ error }: { error: Error }) {
   );
 }
 
+interface UserProfileProps {
+  profile: User | null;
+  profileDate: string;
+  onPrevProfile: () => void;
+  onNextProfile: () => void;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+function UserProfile({ profile, profileDate, onPrevProfile, onNextProfile, hasNext, hasPrev }: UserProfileProps) {
+  if (!profile) {
+    return (
+      <Paper sx={{ p: 2, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography variant="body1">No profile information available</Typography>
+      </Paper>
+    );
+  }
+
+  const profileInfo = profile.profileInfo;
+
+  return (
+    <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+        <Avatar 
+          src={profileInfo?.bigAvatar || profile.avatar} 
+          alt={profile.fullName}
+          sx={{ width: 120, height: 120, mb: 2 }}
+        />
+        <Typography variant="h6" fontWeight="bold">{profile.fullName}</Typography>
+        <Typography variant="body2" color="text.secondary">@{profile.userName}</Typography>
+      </Box>
+
+      {profileInfo && (
+        <Box sx={{ mb: 2, flex: 1 }}>
+          {profileInfo.text && (
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              {profileInfo.text}
+            </Typography>
+          )}
+
+          {(profileInfo.location || profileInfo.urls?.length) && (
+            <Box sx={{ mb: 2 }}>
+              {profileInfo.location && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <LocationOnIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                  <Typography variant="body2">{profileInfo.location}</Typography>
+                </Box>
+              )}
+              
+              {profileInfo.urls && profileInfo.urls.length > 0 && (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <LinkIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                  <Typography variant="body2" component="a" href={profileInfo.urls[0]} target="_blank" sx={{ textDecoration: 'none', color: 'primary.main' }}>
+                    {profileInfo.urls[0].replace(/^https?:\/\/(www\.)?/, '')}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            {profileInfo.followers !== undefined && (
+              <Typography variant="body2">
+                <strong>{profileInfo.followers.toLocaleString()}</strong> Followers
+              </Typography>
+            )}
+            {profileInfo.following !== undefined && (
+              <Typography variant="body2">
+                <strong>{profileInfo.following.toLocaleString()}</strong> Following
+              </Typography>
+            )}
+          </Box>
+
+          {profileInfo.joined && (
+            <Typography variant="body2" color="text.secondary">
+              Joined {profileInfo.joined}
+            </Typography>
+          )}
+        </Box>
+      )}
+
+      <Divider sx={{ my: 1 }} />
+      
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <IconButton onClick={onPrevProfile} disabled={!hasPrev}>
+          <ArrowBackIosNewIcon fontSize="small" />
+        </IconButton>
+        
+        <Typography variant="caption" color="text.secondary">
+          Profile as of {profileDate}
+        </Typography>
+        
+        <IconButton onClick={onNextProfile} disabled={!hasNext}>
+          <ArrowForwardIosIcon fontSize="small" />
+        </IconButton>
+      </Box>
+    </Paper>
+  );
+}
+
 function Timeline1({ user }: { user: string }) {
   const [lst, setLst] = useState<JSX.Element[]>([]);
   const cdxList = useRef<CdxItem[] | null>(null);
@@ -39,11 +144,38 @@ function Timeline1({ user }: { user: string }) {
   const { showBoundary } = useErrorBoundary();
   const page = useRef(0);
   const pageSize = 30;
+  
+  // User profile state
+  const [profiles, setProfiles] = useState<User[]>([]);
+  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
+  const [profileDate, setProfileDate] = useState<string>("");
+  
   const updateLst = useCallback((cdxData, init: boolean) => {
     const l = cdxData.map((i: CdxItem) =>
-      <LoadableTCard user={user} cdxItem={{ ... i, origUrl: i.original }} key={i.id} />);
+      <LoadableTCard 
+        user={user} 
+        cdxItem={{ ... i, origUrl: i.original }} 
+        key={i.id} 
+        onProfileLoaded={(post) => {
+          if (post.user && post.user.profileInfo) {
+            setProfiles(prevProfiles => {
+              // Check if we already have this profile (by username and profile text)
+              const exists = prevProfiles.some(p => 
+                p.userName === post.user.userName && 
+                p.profileInfo?.text === post.user.profileInfo?.text
+              );
+              
+              if (!exists) {
+                return [...prevProfiles, post.user];
+              }
+              return prevProfiles;
+            });
+          }
+        }}
+      />);
     setLst(lst => init ? l : lst.concat(l));
   }, []);
+  
   const fetchData = (init: boolean) => {
     if (init) {
       page.current = 0;
@@ -58,8 +190,10 @@ function Timeline1({ user }: { user: string }) {
       updateLst(nextData, init);
     }
   }
+  
   const { tweetFilter } = useContext(FilterContext);
   const { dateInRange } = tweetFilter;
+  
   useEffect(() => {
     getCdxList(config!, user, dateInRange).then((data) => {
       cdxList.current = data.filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)));
@@ -70,19 +204,52 @@ function Timeline1({ user }: { user: string }) {
     });
   }, [config, user, showBoundary, dateInRange]);
 
+  useEffect(() => {
+    if (profiles.length > 0) {
+      const formattedDate = DateTime.fromJSDate(new Date()).toFormat('MMM d, yyyy');
+      setProfileDate(formattedDate);
+    }
+  }, [profiles, currentProfileIndex]);
+
+  const handlePrevProfile = () => {
+    if (currentProfileIndex > 0) {
+      setCurrentProfileIndex(currentProfileIndex - 1);
+    }
+  };
+
+  const handleNextProfile = () => {
+    if (currentProfileIndex < profiles.length - 1) {
+      setCurrentProfileIndex(currentProfileIndex + 1);
+    }
+  };
+
   // TODO: fix empty logic
   return ((isInitLoading) ? <LoadingCircle /> :
-    <InfiniteScroll
-      dataLength={lst.length}
-      next={() => fetchData(false)}
-      hasMore={hasMore}
-      loader={null}
-      endMessage={null}
-    >
-      <div className="min-h-screen w-full md:w-[80mw] lg:w-[800px]">
-        {lst}
-      </div>
-    </InfiniteScroll>
+    <Grid container spacing={3} sx={{ width: '100%', maxWidth: '1200px', mx: 'auto', px: 2 }}>
+      <Grid item xs={12} md={4} lg={3} sx={{ display: { xs: 'none', md: 'block' } }}>
+        <UserProfile 
+          profile={profiles.length > 0 ? profiles[currentProfileIndex] : null}
+          profileDate={profileDate}
+          onPrevProfile={handlePrevProfile}
+          onNextProfile={handleNextProfile}
+          hasPrev={currentProfileIndex > 0}
+          hasNext={currentProfileIndex < profiles.length - 1}
+        />
+      </Grid>
+      <Grid item xs={12} md={8} lg={9}>
+        <InfiniteScroll
+          dataLength={lst.length}
+          next={() => fetchData(false)}
+          hasMore={hasMore}
+          loader={null}
+          endMessage={null}
+        >
+          <div className="min-h-screen w-full">
+            {lst}
+          </div>
+        </InfiniteScroll>
+      </Grid>
+    </Grid>
   );
 }
 
@@ -91,4 +258,3 @@ export function Timeline({ user }: { user: string }) {
     <Timeline1 user={user} />
   </ErrorBoundary>)
 }
-

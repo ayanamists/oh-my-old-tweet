@@ -63,7 +63,6 @@ function Timeline1({ user }: { user: string }) {
   useEffect(() => {
     getCdxList(config!, user, dateInRange).then((data) => {
       cdxList.current = data.filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)));
-      console.log(cdxList.current);
       fetchData(true);
       setIsInitLoading(false);
     }).catch((e) => {

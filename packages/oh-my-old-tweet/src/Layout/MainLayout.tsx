@@ -252,7 +252,9 @@ function SideBar() {
               textField: { fullWidth: true, size: 'small' },
             }}
           />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%',
+                     gap: 1
+          }}>
             <Typography variant="caption" color="text.secondary">
               *Filters by archive.org capture date
             </Typography>

@@ -17,6 +17,11 @@ export default function RootLayout({
 
         <body>
             <noscript>You need to enable JavaScript to run this app.</noscript>
+            <>
+            <script defer src='https://static.cloudflareinsights.com/beacon.min.js'
+                    data-cf-beacon='{"token": "a0dc8ecd363740feaa7684b0653526ce"}'>
+            </script>
+            </>
             <div id="root">{children}</div>
         </body>
 

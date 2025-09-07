@@ -63,6 +63,11 @@ export function parseHtmlPost(html: string, { id, timestamp, userName }: Archive
     if (metaTag != null) {
       return extractFromMetaTag(metaTag, internalInfo);
     } else {
+      // Try the new archive.org format with embedded JSON
+      const newFormatData = extractFromNewArchiveFormat(doc, internalInfo);
+      if (newFormatData != null) {
+        return newFormatData;
+      }
       return;
     }
   }
@@ -345,6 +350,140 @@ function fixImageUrl(url: string, info: { timestamp: string }) {
   } else {
     return toHttps(url);
   }
+}
+
+
+function fixImageUrlNew(url: string, info: { timestamp: string }) {
+  const urlObj = new URL(url);
+  const path = urlObj.pathname;
+  const segs = path.split('/');
+  const fileName = segs[segs.length - 1];
+
+  // 分离扩展名和文件名
+  const dotIndex = fileName.lastIndexOf('.');
+  const baseName = dotIndex >= 0 ? fileName.slice(0, dotIndex) : fileName;
+  const ext = dotIndex >= 0 ? fileName.slice(dotIndex + 1) : '';
+
+  // 拼接 archive url
+  return `https://web.archive.org/web/${info.timestamp}im_/${urlObj.origin}${path.replace(
+    fileName,
+    baseName
+  )}?format=${ext}&name=orig`;
+}
+
+
+function extractFromNewArchiveFormat(doc: Document, info: ArchiveTweetInfo1): Post | undefined {
+  // Look for the new archive format with .tweet-container and embedded JSON
+  const tweetContainer = doc.querySelector('.tweet-container');
+
+  if (!tweetContainer) {
+    return undefined;
+  }
+
+  let jsonData: any = null;
+
+  // Try to extract JSON from <pre> tag first
+  const jsonView = doc.querySelector('#jsonview pre');
+  if (jsonView && jsonView.textContent) {
+    try {
+      jsonData = JSON.parse(jsonView.textContent);
+    } catch (e) {
+      // Fall through to script extraction
+    }
+  }
+
+  if (!jsonData) {
+    return undefined;
+  }
+
+  try {
+    const tweetData = jsonData.data;
+    const includes = jsonData.includes;
+
+    if (!tweetData) {
+      return undefined;
+    }
+
+    // Extract user information
+    const userId = tweetData.author_id;
+    const user = includes?.users?.find((u: any) => u.id === userId);
+
+    if (!user) {
+      return undefined;
+    }
+
+    // Extract media information from JSON
+    const mediaData = includes?.media || [];
+    const images: string[] = [];
+    let videoInfo: { thumbUrl: string } | undefined = undefined;
+
+    mediaData.forEach((media: any) => {
+      if (media.type === 'photo') {
+        images.push(fixImageUrlNew(media.url, info));
+      } else if (media.type === 'video') {
+        if (media.preview_image_url) {
+          videoInfo = { thumbUrl: fixImageUrlNew(media.preview_image_url, info) };
+        }
+      }
+    });
+
+    // Parse date
+    const date = new Date(tweetData.created_at);
+
+    // Clean up text (remove t.co URLs that are media attachments)
+    let cleanText = tweetData.text;
+    if (tweetData.entities?.urls) {
+      tweetData.entities.urls.forEach((url: any) => {
+        if (url.media_key) {
+          cleanText = cleanText.replace(url.url, '').trim();
+        }
+      });
+    }
+
+    return {
+      user: {
+        userName: mayRemoveAtSym(user.username),
+        fullName: user.name,
+        avatar: user.profile_image_url ? fixImageUrl(user.profile_image_url, info) : undefined,
+        id: user.id,
+        profileInfo: (user.description || user.location || user.public_metrics) ? {
+          text: user.description,
+          location: user.location,
+          followers: user.public_metrics?.followers_count,
+          following: user.public_metrics?.following_count,
+          joined: user.created_at,
+          bigAvatar: user.profile_image_url?.includes('_normal')
+            ? fixImageUrl(user.profile_image_url.replace('_normal', ''), info)
+            : undefined,
+          urls: user.entities?.url?.urls?.map((u: any) => u.expanded_url).filter(Boolean)
+        } : undefined
+      },
+      id: tweetData.id,
+      text: cleanText,
+      images: images,
+      archiveUrl: info.pageUrl,
+      tweetUrl: info.tweetUrl,
+      date: date,
+      videoInfo: videoInfo == null ? undefined : videoInfo,
+    };
+  } catch (error) {
+    console.warn(`Failed to parse new archive format: ${error}`);
+    return undefined;
+  }
+}
+
+function extractImagesFromNewFormat(container: Element, info: ArchiveTweetInfo1): string[] {
+  const images = container.getElementsByTagName('img');
+  const urls: string[] = [];
+
+  for (let i = 0; i < images.length; ++i) {
+    const img = images[i];
+    if (img.classList.contains('tweet-image') && img.src) {
+      urls.push(fixImageUrl(img.src, info));
+    }
+  }
+
+  return urls;
 }
 
 export function mayRemoveAtSym(str: string | undefined) {

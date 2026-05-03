@@ -11,7 +11,7 @@
     "siteBuild": "cd packages/oh-my-old-tweet && yarn build",
     "cliBuild": "cd packages/omot-cli && yarn build",
     "build": "run-s parserBuild cardProductionBuild siteBuild cliBuild",
-    "test": "cd packages/twitter-data-parser && yarn test"
+    "test": "yarn workspace twitter-data-parser test && yarn workspace oh-my-old-tweet test && yarn workspace omot-edge test"
   },
   "keywords": [],
   "author": "",

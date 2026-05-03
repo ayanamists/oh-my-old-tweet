@@ -10,7 +10,9 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CheckIcon from '@mui/icons-material/Check';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import HelpIcon from '@mui/icons-material/Help';
+import SearchIcon from '@mui/icons-material/Search';
 import { Button, CssBaseline, Divider, Drawer, FormControl, FormControlLabel, FormGroup, InputLabel, Link, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, Tooltip, createTheme, useMediaQuery } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@emotion/react';
 import { ConfigContext } from '../context/ConfigContext';
 import { CorsProxyConfig, defaultConfig, saveToLocal } from '../corsUrl';
@@ -44,6 +46,8 @@ function SideBar() {
   const initConfig = config!;
   const { tweetFilter, setTweetFilter } = React.useContext(FilterContext);
   const [prefix, setPrefix] = React.useState<string>(initConfig.prefix);
+  const [edgeUrl, setEdgeUrl] = React.useState<string>(initConfig.edgeUrl ?? '');
+  const [apiKey, setApiKey] = React.useState<string>(initConfig.apiKey ?? '');
   const _setConfig = (config: CorsProxyConfig) => {
     setConfig(config);
     setPrefix(config.prefix);
@@ -170,6 +174,36 @@ function SideBar() {
     <List>
       <ListItem>
         <Typography variant='subtitle2'>
+          Edge Worker Settings
+        </Typography>
+      </ListItem>
+      <ListItem>
+        <TextField fullWidth label="Edge Worker URL" id="EdgeUrl"
+          onChange={(e) => setEdgeUrl(e.target.value)}
+          value={edgeUrl}
+        />
+        <IconButton edge="end" aria-label="apply edge url" onClick={() => {
+          _setConfig({ ...initConfig, edgeUrl: edgeUrl || undefined });
+        }}>
+          <CheckIcon />
+        </IconButton>
+      </ListItem>
+      <ListItem>
+        <TextField fullWidth label="API Key" id="ApiKey" type="password"
+          onChange={(e) => setApiKey(e.target.value)}
+          value={apiKey}
+        />
+        <IconButton edge="end" aria-label="apply api key" onClick={() => {
+          _setConfig({ ...initConfig, apiKey: apiKey || undefined });
+        }}>
+          <CheckIcon />
+        </IconButton>
+      </ListItem>
+    </List>
+    <Divider variant="middle" />
+    <List>
+      <ListItem>
+        <Typography variant='subtitle2'>
           Cache Settings
         </Typography>
       </ListItem>
@@ -275,6 +309,9 @@ function SideBar() {
 
 function ButtonAppBar() {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { config } = React.useContext(ConfigContext);
+  const navigate = useNavigate();
+  const hasEdge = Boolean(config?.edgeUrl);
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar component="nav"
@@ -307,6 +344,16 @@ function ButtonAppBar() {
               OMOT
             </Link>
           </Typography>
+          {hasEdge && (
+            <IconButton
+              size="large"
+              color="inherit"
+              aria-label="search archive"
+              onClick={() => navigate('/search')}
+            >
+              <SearchIcon />
+            </IconButton>
+          )}
           <IconButton
             size='large'
             color='inherit'

@@ -2,51 +2,48 @@ import { useContext, useEffect } from "react";
 import { Post } from "twitter-data-parser";
 import { ConfigContext } from "./context/ConfigContext";
 import { MinimalCdxInfo, getArchivePageUrl, getOnePage } from "./Data";
-
-function parseStorageItem(str: string): Post | boolean {
-  const data = JSON.parse(str);
-  if (data.data == null) {
-    return false;
-  }
-  const post = data.data as Post;
-  if (!(post.date instanceof Date)) {
-    post.date = new Date(post.date);
-  }
-
-  return post;
-}
+import { getCached, setCached } from "./cache/IdbCache";
 
 const useCachedFetch = (cdxItem: MinimalCdxInfo, setData: (p: Post | boolean) => void) => {
   const { config } = useContext(ConfigContext);
   useEffect(() => {
+    let cancelled = false;
     const id = cdxItem.id;
-    const item = localStorage.getItem(id);
-    if (item != null) {
-      setData(parseStorageItem(item));
-    } else {
-      (async () => {
-        await (getOnePage(config!, cdxItem).then((response) => {
-          try {
-            localStorage.setItem(id, JSON.stringify({ data: response }));
-          } catch (err) {
-            console.info(`encounter ${err}, local storage full, clear all`);
-            localStorage.clear();
-          } finally {
-            if (response == null) {
-              console.warn(`fail to parse ${getArchivePageUrl(cdxItem)}`)
-              setData(false);
-            } else {
-              setData(response);
-            }
-          }
-        })
-          .catch((err) => {
-            // TODO: add retry
-            setData(false)
-            console.warn(`fail to load ${getArchivePageUrl(cdxItem)}, due to ${err}`);
-          }));
-      })();
-    }
+
+    (async () => {
+      const lookup = await getCached(id);
+      if (cancelled) return;
+
+      if (lookup.kind === 'hit') {
+        setData(lookup.post);
+        return;
+      }
+      if (lookup.kind === 'negative') {
+        setData(false);
+        return;
+      }
+
+      try {
+        const response = await getOnePage(config!, cdxItem);
+        if (cancelled) return;
+        if (response == null) {
+          console.warn(`fail to parse ${getArchivePageUrl(cdxItem)}`);
+          await setCached(id, null);
+          setData(false);
+        } else {
+          await setCached(id, response);
+          setData(response);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.warn(`fail to load ${getArchivePageUrl(cdxItem)}, due to ${err}`);
+        setData(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [cdxItem, config, setData]);
 };
 

@@ -1,6 +1,7 @@
 "use client"
 import { Routes, Route, HashRouter } from 'react-router-dom';
 import MainPage from './MainPage';
+import SearchPage from './SearchPage';
 import StatusPage from './StatusPage';
 import UserPage from './UserPage';
 import { ConfigContext, ConfigContextProvider } from 'src/context/ConfigContext';
@@ -32,6 +33,7 @@ function App() {
         <HashRouter>
           <Routes>
             <Route path="/" element={<MainPage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/:user" element={<UserPage />} />
             <Route path='/status/:user/:timestamp/:id' element={<StatusPage />} />
           </Routes>

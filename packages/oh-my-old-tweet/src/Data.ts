@@ -1,6 +1,35 @@
-import { CorsProxyConfig, getUrl } from "./corsUrl";
-import { parsePost, Post, parseCdxItem, CdxItem } from "twitter-data-parser"
+import { CorsProxyConfig, buildProxiedUrls, fetchWithFallbacks } from "./corsUrl";
+import { parsePost, Post, parseCdxItem, CdxItem, ArchiveTweetInfo } from "twitter-data-parser"
 import { Interval } from "luxon";
+
+async function tryEdgeWorker(edgeUrl: string, archiveUrl: string, apiKey?: string): Promise<Post | undefined> {
+  try {
+    const endpoint = `${edgeUrl.replace(/\/$/, '')}/snapshot?url=${encodeURIComponent(archiveUrl)}`;
+    const headers: HeadersInit = apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {};
+    const res = await fetch(endpoint, { signal: AbortSignal.timeout(10_000), headers });
+    if (!res.ok) return undefined;
+    const data = await res.json() as { post?: Post | null };
+    if (!data.post) return undefined;
+    if (!(data.post.date instanceof Date)) {
+      data.post.date = new Date(data.post.date as unknown as string);
+    }
+    return data.post;
+  } catch {
+    return undefined;
+  }
+}
+
+async function parseMaybeInWorker(html: string, meta: ArchiveTweetInfo): Promise<Post | undefined> {
+  if (typeof Worker !== 'undefined') {
+    try {
+      const { parseInWorker } = await import('./parserClient');
+      return await parseInWorker(html, meta);
+    } catch {
+      // Worker unavailable or failed — fall through to main-thread parse
+    }
+  }
+  return parsePost(html, meta);
+}
 
 function subtractInterval(a: Interval, b: Interval): Interval[] {
   const { start: aStart, end: aEnd } = a;
@@ -117,7 +146,8 @@ function fetchOneCdx(config: CorsProxyConfig, user: string, interval: Interval):
   url.searchParams.append('limit', '100000');
   url.searchParams.append('from', interval.start!.toFormat('yyyyMMddHHmmss'));
   url.searchParams.append('to', interval.end!.toFormat('yyyyMMddHHmmss'));
-  return fetch(getUrl(config, url.toString()))
+  url.searchParams.append('collapse', 'digest');
+  return fetchWithFallbacks(buildProxiedUrls(config, url.toString()))
     .then(res => res.json())
     .then((j: string[][]) => j.map(parseCdxItem));
 }
@@ -141,29 +171,25 @@ export function getShareLink(user: string, cdxItem: MinimalCdxInfo) {
   return `${baseUrl}/#/status/${user}/${cdxItem.timestamp}/${cdxItem.id}/?mimetype=${encodeURIComponent(cdxItem.mimetype)}`;
 }
 
-export function getOnePage(config: CorsProxyConfig, cdxItem: MinimalCdxInfo): Promise<Post | undefined> {
+export async function getOnePage(config: CorsProxyConfig, cdxItem: MinimalCdxInfo): Promise<Post | undefined> {
   const timeStamp = cdxItem.timestamp;
-  const origUrl = cdxItem.origUrl
+  const origUrl = cdxItem.origUrl;
   const urlSplit = origUrl.split('/');
   const statusIdx = urlSplit.indexOf("status");
-  if (statusIdx !== -1) {
-    const user = urlSplit[statusIdx - 1];
-    const id = cdxItem.id;
-    const pageUrl = getArchivePageUrl(cdxItem);
-    return fetch(getUrl(config, pageUrl))
-      .then(res => {
-        if (!res.ok) {
-          throw Error(res.statusText);
-        }
-        return res;
-      })
-      .then((res => res.text()))
-      .then((res) => parsePost(res, {
-        id: id,
-        timestamp: timeStamp,
-        userName: user
-      }));
-  } else {
-    return Promise.resolve(undefined);
-  }  
+  if (statusIdx === -1) return undefined;
+
+  const user = urlSplit[statusIdx - 1];
+  const id = cdxItem.id;
+  const pageUrl = getArchivePageUrl(cdxItem);
+
+  // Fast path: edge Worker returns pre-parsed JSON from R2
+  if (config.edgeUrl) {
+    const edgeResult = await tryEdgeWorker(config.edgeUrl, pageUrl, config.apiKey);
+    if (edgeResult !== undefined) return edgeResult;
+  }
+
+  // Fallback: direct archive.org fetch + parse (Worker or main thread)
+  const html = await fetchWithFallbacks(buildProxiedUrls(config, pageUrl))
+    .then(res => res.text());
+  return parseMaybeInWorker(html, { id, timestamp: timeStamp, userName: user });
 }

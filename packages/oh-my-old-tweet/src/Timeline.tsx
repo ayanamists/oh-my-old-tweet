@@ -2,9 +2,10 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { CdxItem, User } from "twitter-data-parser";
 import { getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
+import { SkeletonList } from "./SkeletonCard";
 import { ConfigContext } from "./context/ConfigContext";
 import { ErrorBoundary, useErrorBoundary, } from "react-error-boundary";
-import { Box, CircularProgress, List, ListItem, Typography, Paper, Avatar, IconButton, Grid, Divider, Link as MuiLink } from "@mui/material";
+import { Box, List, ListItem, Typography, Paper, Avatar, IconButton, Grid, Divider } from "@mui/material";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { FilterContext } from "./context/FilterContext";
 import { DateTime } from "luxon";
@@ -12,10 +13,6 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import LinkIcon from '@mui/icons-material/Link';
-
-function LoadingCircle() {
-  return (<CircularProgress size={60} />);
-}
 
 function fallbackRender({ error }: { error: Error }) {
   return (<Box>
@@ -147,7 +144,7 @@ function Timeline1({ user }: { user: string }) {
   const cdxList = useRef<CdxItem[] | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const { config } = useContext(ConfigContext);
-  const [isInitLoading, setIsInitLoading] = useState(true);
+  const [cdxLoading, setCdxLoading] = useState(true);
   const { showBoundary } = useErrorBoundary();
   const page = useRef(0);
   const pageSize = 30;
@@ -202,10 +199,11 @@ function Timeline1({ user }: { user: string }) {
   const { dateInRange } = tweetFilter;
   
   useEffect(() => {
+    setCdxLoading(true);
     getCdxList(config!, user, dateInRange).then((data) => {
       cdxList.current = data.filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)));
       fetchData(true);
-      setIsInitLoading(false);
+      setCdxLoading(false);
     }).catch((e) => {
       showBoundary(e);
     });
@@ -230,8 +228,29 @@ function Timeline1({ user }: { user: string }) {
     }
   };
 
-  // TODO: fix empty logic
-  return ((isInitLoading) ? <LoadingCircle /> :
+  function tweetListContent() {
+    if (cdxLoading) return <SkeletonList count={8} />;
+    if (lst.length === 0) return (
+      <Box sx={{ py: 6, textAlign: 'center' }}>
+        <Typography variant="body1" color="text.secondary">
+          No archived tweets found for @{user}.
+        </Typography>
+      </Box>
+    );
+    return (
+      <InfiniteScroll
+        dataLength={lst.length}
+        next={() => fetchData(false)}
+        hasMore={hasMore}
+        loader={null}
+        endMessage={null}
+      >
+        {lst}
+      </InfiniteScroll>
+    );
+  }
+
+  return (
     <Grid container spacing={3} sx={{ width: '100%', maxWidth: '1000px', mx: 'auto', px: 2 }}>
       <Grid item xs={12} md={3} lg={4} sx={{
         display: { xs: 'none', md: 'block' },
@@ -249,15 +268,7 @@ function Timeline1({ user }: { user: string }) {
         />
       </Grid>
       <Grid item xs={12} md={8} lg={8}>
-        <InfiniteScroll
-          dataLength={lst.length}
-          next={() => fetchData(false)}
-          hasMore={hasMore}
-          loader={null}
-          endMessage={null}
-        >
-          {lst}
-        </InfiniteScroll>
+        {tweetListContent()}
       </Grid>
     </Grid>
   );

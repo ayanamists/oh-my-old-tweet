@@ -1,0 +1,31 @@
+name = "omot-edge"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+
+[vars]
+PARSER_VERSION = "1"
+ARCHIVE_BASE = "https://web.archive.org"
+
+# ── Bindings (filled in by the operator before first deploy) ──────────────────
+# Uncomment and populate after running:
+#   yarn cf:r2:create   →  copies bucket name here
+#   yarn cf:d1:create   →  copies database_id here
+
+[[r2_buckets]]
+binding = "OMOT_CACHE"
+bucket_name = "omot-cache"
+
+[[d1_databases]]
+binding = "OMOT_DB"
+database_name = "omot-db"
+database_id = "dd6b5552-8bfb-4b8d-86fe-acec662e4eae"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["0 3 * * *"]   # daily at 03:00 UTC
+
+[dev]
+port = 8787
+local_protocol = "http"

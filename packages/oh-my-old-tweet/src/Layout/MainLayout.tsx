@@ -1,410 +1,424 @@
 "use client";
 
 import * as React from 'react';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
-import CheckIcon from '@mui/icons-material/Check';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import HelpIcon from '@mui/icons-material/Help';
-import SearchIcon from '@mui/icons-material/Search';
-import { Button, CssBaseline, Divider, Drawer, FormControl, FormControlLabel, FormGroup, InputLabel, Link, List, ListItem, ListItemText, MenuItem, Select, Switch, TextField, Tooltip, createTheme, useMediaQuery } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { ThemeProvider } from '@emotion/react';
+import { Settings, Search, HelpCircle, ChevronLeft, ChevronRight, Info } from 'lucide-react';
+
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222 0 1.604-.015 2.896-.015 3.286 0 .322.216.694.825.576C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z" />
+    </svg>
+  );
+}
+import { Toaster, toast } from 'sonner';
+import { DateTime, Interval } from 'luxon';
+
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Switch } from '../../components/ui/switch';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Separator } from '../../components/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip';
+
 import { ConfigContext } from '../context/ConfigContext';
 import { CorsProxyConfig, defaultConfig, saveToLocal } from '../corsUrl';
-import { FilterContext, TweetFilter } from 'src/context/FilterContext';
-import CheckBox from '@mui/material/Checkbox';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { DateTime, Interval } from 'luxon';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { FilterContext } from 'src/context/FilterContext';
+import { parseUserName } from '../InputParser';
+import { cn } from '../../lib/utils';
 
-type MainLayoutProps = {
-  children: React.ReactNode,
-};
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function setIncludeContent(tweetFilter: TweetFilter, content: "reply" | "post", value: boolean) {
-  const newContent = [...tweetFilter.contentBelongTo];
+function setIncludeContent(
+  filter: { contentBelongTo: ('reply' | 'post')[] },
+  content: 'reply' | 'post',
+  value: boolean,
+) {
+  const next = [...filter.contentBelongTo];
   if (value) {
-    if (!newContent.includes(content)) {
-      newContent.push(content);
-    }
+    if (!next.includes(content)) next.push(content);
   } else {
-    const index = newContent.indexOf(content);
-    if (index !== -1) {
-      newContent.splice(index, 1);
-    }
+    const i = next.indexOf(content);
+    if (i !== -1) next.splice(i, 1);
   }
-  return newContent;
+  return next;
 }
 
-function SideBar() {
+// ─── Settings Panel ───────────────────────────────────────────────────────────
+
+function SettingsPanel() {
   const { config, setConfig } = React.useContext(ConfigContext);
-  const initConfig = config!;
   const { tweetFilter, setTweetFilter } = React.useContext(FilterContext);
-  const [prefix, setPrefix] = React.useState<string>(initConfig.prefix);
-  const [edgeUrl, setEdgeUrl] = React.useState<string>(initConfig.edgeUrl ?? '');
-  const [apiKey, setApiKey] = React.useState<string>(initConfig.apiKey ?? '');
-  const _setConfig = (config: CorsProxyConfig) => {
-    setConfig(config);
-    setPrefix(config.prefix);
-    saveToLocal(config);
-  };
-  const includeReply = tweetFilter.contentBelongTo.includes("reply");
-  const includePost = tweetFilter.contentBelongTo.includes("post");
-  const toggleIncludeReply = (value) => {
-    const newContent = setIncludeContent(tweetFilter, "reply", value);
-    setTweetFilter({
-      ...tweetFilter,
-      contentBelongTo: newContent
-    });
-  };
-  const toggleIncludePost = (value) => {
-    const newContent = setIncludeContent(tweetFilter, "post", value);
-    setTweetFilter({
-      ...tweetFilter,
-      contentBelongTo: newContent
-    });
+  const cfg = config!;
+
+  const [prefix, setPrefix] = React.useState(cfg.prefix);
+  const [edgeUrl, setEdgeUrl] = React.useState(cfg.edgeUrl ?? '');
+  const [apiKey, setApiKey] = React.useState(cfg.apiKey ?? '');
+
+  const save = React.useCallback(
+    (patch: Partial<CorsProxyConfig>) => {
+      const next = { ...cfg, ...patch };
+      setConfig(next);
+      saveToLocal(next);
+      toast.success('Settings saved');
+    },
+    [cfg, setConfig],
+  );
+
+  const includeReply = tweetFilter.contentBelongTo.includes('reply');
+  const includePost  = tweetFilter.contentBelongTo.includes('post');
+
+  const startIso = (tweetFilter.dateInRange.start as DateTime).toISODate() ?? '';
+  const endIso   = (tweetFilter.dateInRange.end   as DateTime).toISODate() ?? '';
+
+  const handleDateChange = (which: 'start' | 'end', value: string) => {
+    const dt = DateTime.fromISO(value);
+    if (!dt.isValid) return;
+    const start = which === 'start' ? dt : (tweetFilter.dateInRange.start as DateTime);
+    const end   = which === 'end'   ? dt : (tweetFilter.dateInRange.end   as DateTime);
+    const next  = Interval.fromDateTimes(start, end);
+    if (next.isValid) setTweetFilter({ ...tweetFilter, dateInRange: next });
   };
 
-  // Handle date range filter
-  const startDate = tweetFilter.dateInRange.start;
-  const endDate = tweetFilter.dateInRange.end;
+  return (
+    <div className="flex flex-col gap-6 overflow-y-auto pt-2">
+      <Tabs defaultValue="general">
+        <TabsList className="w-full">
+          <TabsTrigger value="general"  className="flex-1">General</TabsTrigger>
+          <TabsTrigger value="proxy"    className="flex-1">Proxy</TabsTrigger>
+          <TabsTrigger value="edge"     className="flex-1">Edge</TabsTrigger>
+        </TabsList>
 
-  const handleStartDateChange = (newDate: DateTime) => {
-    const newInterval = Interval.fromDateTimes(newDate, tweetFilter.dateInRange.end as DateTime);
-    if (!newInterval.isValid) {
-      return;
-    }
-    setTweetFilter({
-      ...tweetFilter,
-      dateInRange: newInterval
-    });
-  };
+        {/* ── General ── */}
+        <TabsContent value="general" className="space-y-5 mt-4">
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Content</h3>
 
-  const handleEndDateChange = (newDate: DateTime) => {
-    const newInterval = Interval.fromDateTimes(tweetFilter.dateInRange.start as DateTime, newDate);
-    if (!newInterval.isValid) {
-      return;
-    }
-    setTweetFilter({
-      ...tweetFilter,
-      dateInRange: newInterval
-    });
-  };
+            <div className="flex items-center justify-between">
+              <Label htmlFor="incl-reply">Include Replies</Label>
+              <Checkbox
+                id="incl-reply"
+                checked={includeReply}
+                onCheckedChange={v => {
+                  const next = setIncludeContent(tweetFilter, 'reply', Boolean(v));
+                  setTweetFilter({ ...tweetFilter, contentBelongTo: next });
+                }}
+              />
+            </div>
 
-  const clearDateRange = () => {
-    setTweetFilter({
-      ...tweetFilter,
-      dateInRange: Interval.fromDateTimes(DateTime.fromISO('2006-03-21'), DateTime.now())
-    });
-  };
+            <div className="flex items-center justify-between">
+              <Label htmlFor="incl-post">Include Posts</Label>
+              <Checkbox
+                id="incl-post"
+                checked={includePost}
+                onCheckedChange={v => {
+                  const next = setIncludeContent(tweetFilter, 'post', Boolean(v));
+                  setTweetFilter({ ...tweetFilter, contentBelongTo: next });
+                }}
+              />
+            </div>
 
-  return (<>
-    <List>
-      <ListItem>
-        <Typography variant='subtitle2'>
-          Cors Proxy Settings
-        </Typography>
-      </ListItem>
-      <ListItem>
-        <Box sx={{ minWidth: 120 }}>
-          <FormControl fullWidth>
-            <InputLabel id="mode-select-label">Mode</InputLabel>
-            <Select placeholder="Choose one…"
-              labelId="mode-select-label"
-              value={config!.mode}
-              label="mode"
-              onChange={(e) => {
-                let v = e.target.value;
-                const intValue = Number.parseInt(v.toString());
-                const newConfig = intValue === 1 ? defaultConfig : {
-                  ...initConfig,
-                  mode: intValue,
-                  prefix: intValue === 2 ? "" : initConfig.prefix
-                };
-                _setConfig(newConfig);
+            <div className="flex items-center justify-between">
+              <Label htmlFor="img-only">Images Only</Label>
+              <Switch
+                id="img-only"
+                checked={tweetFilter.mustContainImage}
+                onCheckedChange={v =>
+                  setTweetFilter({ ...tweetFilter, mustContainImage: v })
+                }
+              />
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-3">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date Range</h3>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px]">
+                    Filters by archive.org capture date, not the original tweet date.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="date-start">From</Label>
+              <Input
+                id="date-start"
+                type="date"
+                value={startIso}
+                onChange={e => handleDateChange('start', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-end">To</Label>
+              <Input
+                id="date-end"
+                type="date"
+                value={endIso}
+                onChange={e => handleDateChange('end', e.target.value)}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() =>
+                setTweetFilter({
+                  ...tweetFilter,
+                  dateInRange: Interval.fromDateTimes(
+                    DateTime.fromISO('2006-03-21'),
+                    DateTime.now(),
+                  ),
+                })
+              }
+            >
+              Reset Date Range
+            </Button>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cache</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                localStorage.clear();
+                saveToLocal(cfg);
+                toast.success('Cache cleared');
               }}
             >
-              <MenuItem value={1}>Cloudflare</MenuItem>
-              <MenuItem value={2}>None</MenuItem>
-              <MenuItem value={3}>Custom</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </ListItem>
-      <ListItem>
-        <TextField fullWidth label="Proxy URL" id="ProxyUrl" onChange={(e) => {
-          setPrefix(e.target.value);
-        }}
-          value={prefix}
-        />
-        <IconButton edge="end" aria-label="comments" onClick={() => {
-          _setConfig({
-            ...initConfig,
-            prefix: prefix,
-          })
-        }}>
-          <CheckIcon />
-        </IconButton>
-      </ListItem>
-
-      <ListItem>
-        <ListItemText id="switch-list-label-coding" primary="Encoding URLs" />
-        <Switch
-          edge="end"
-          inputProps={{
-            'aria-labelledby': 'switch-list-label-coding',
-          }}
-          onChange={() => {
-            const codingNew = !config!.urlEncoding;
-            _setConfig({
-              ...initConfig,
-              urlEncoding: codingNew
-            })
-          }}
-          checked={config!.urlEncoding}
-        />
-      </ListItem>
-    </List>
-    <Divider variant="middle" />
-    <List>
-      <ListItem>
-        <Typography variant='subtitle2'>
-          Edge Worker Settings
-        </Typography>
-      </ListItem>
-      <ListItem>
-        <TextField fullWidth label="Edge Worker URL" id="EdgeUrl"
-          onChange={(e) => setEdgeUrl(e.target.value)}
-          value={edgeUrl}
-        />
-        <IconButton edge="end" aria-label="apply edge url" onClick={() => {
-          _setConfig({ ...initConfig, edgeUrl: edgeUrl || undefined });
-        }}>
-          <CheckIcon />
-        </IconButton>
-      </ListItem>
-      <ListItem>
-        <TextField fullWidth label="API Key" id="ApiKey" type="password"
-          onChange={(e) => setApiKey(e.target.value)}
-          value={apiKey}
-        />
-        <IconButton edge="end" aria-label="apply api key" onClick={() => {
-          _setConfig({ ...initConfig, apiKey: apiKey || undefined });
-        }}>
-          <CheckIcon />
-        </IconButton>
-      </ListItem>
-    </List>
-    <Divider variant="middle" />
-    <List>
-      <ListItem>
-        <Typography variant='subtitle2'>
-          Cache Settings
-        </Typography>
-      </ListItem>
-
-      <ListItem>
-        <Button
-          variant="contained"
-          onClick={() => {
-            const cfg = initConfig;
-            localStorage.clear();
-            saveToLocal(cfg);
-          }}
-        >
-          Clear Cache
-        </Button>
-      </ListItem>
-    </List>
-    <Divider variant="middle" />
-    <List>
-      <ListItem>
-        <Typography variant='subtitle2'>
-          Content Settings
-        </Typography>
-      </ListItem>
-
-      <ListItem>
-        <FormGroup>
-          <FormControlLabel
-            control={<CheckBox checked={includeReply} onChange={(event) => { toggleIncludeReply(event.target.checked) }} />}
-            label="Include Replies" />
-          <FormControlLabel
-            control={<CheckBox checked={includePost} onChange={(event) => { toggleIncludePost(event.target.checked) }} />}
-            label="Include Posts" />
-        </FormGroup>
-      </ListItem>
-
-      <ListItem>
-        <ListItemText id="switch-list-label-images" primary="Show Images Only" />
-        <Switch
-          edge="end"
-          inputProps={{
-            'aria-labelledby': 'switch-list-label-images',
-          }}
-          onChange={() => {
-            setTweetFilter({
-              ...tweetFilter,
-              mustContainImage: !tweetFilter.mustContainImage,
-            });
-          }}
-          checked={tweetFilter.mustContainImage}
-        />
-      </ListItem>
-
-      <ListItem>
-        <Typography variant='subtitle2' sx={{ mr: 1 }}>
-          Date Range Filter
-        </Typography>
-        <Tooltip title="This filter applies to when Archive.org captured the page, NOT the original tweet date. It filters tweets based on when they were archived." arrow placement="right">
-          <IconButton size="small" color="primary">
-            <HelpOutlineIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </ListItem>
-
-      <ListItem>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
-          <DatePicker
-            label="Start Date (Archive Capture)"
-            value={startDate}
-            onChange={handleStartDateChange}
-            slotProps={{
-              textField: { fullWidth: true, size: 'small' },
-            }}
-          />
-          <DatePicker
-            label="End Date (Archive Capture)"
-            value={endDate}
-            onChange={handleEndDateChange}
-            slotProps={{
-              textField: { fullWidth: true, size: 'small' },
-            }}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%',
-                     gap: 1
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              *Filters by archive.org capture date
-            </Typography>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={clearDateRange}
-            >
-              Clear Date Range
+              Clear Cache
             </Button>
-          </Box>
-        </Box>
-      </ListItem>
-    </List>
-  </>
+          </section>
+        </TabsContent>
+
+        {/* ── Proxy ── */}
+        <TabsContent value="proxy" className="space-y-5 mt-4">
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CORS Proxy</h3>
+
+            <div className="space-y-2">
+              <Label htmlFor="proxy-mode">Mode</Label>
+              <Select
+                value={String(cfg.mode)}
+                onValueChange={v => {
+                  const intValue = Number.parseInt(v);
+                  const next = intValue === 1 ? defaultConfig : {
+                    ...cfg,
+                    mode: intValue,
+                    prefix: intValue === 2 ? '' : cfg.prefix,
+                  };
+                  save(next);
+                  setPrefix(next.prefix);
+                }}
+              >
+                <SelectTrigger id="proxy-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Cloudflare (default)</SelectItem>
+                  <SelectItem value="2">None (direct)</SelectItem>
+                  <SelectItem value="3">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {cfg.mode === 1 && 'Uses a shared Cloudflare Worker as CORS proxy.'}
+                {cfg.mode === 2 && 'Fetches archive.org directly — may fail due to CORS restrictions.'}
+                {cfg.mode === 3 && 'Uses the URL below as CORS proxy prefix.'}
+              </p>
+            </div>
+
+            {cfg.mode === 3 && (
+              <div className="space-y-2">
+                <Label htmlFor="proxy-url">Proxy URL prefix</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="proxy-url"
+                    value={prefix}
+                    onChange={e => setPrefix(e.target.value)}
+                    placeholder="https://my-proxy.example.com/?target="
+                  />
+                  <Button size="sm" onClick={() => save({ prefix })}>Save</Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="url-encoding">URL Encoding</Label>
+              <Switch
+                id="url-encoding"
+                checked={cfg.urlEncoding}
+                onCheckedChange={v => save({ urlEncoding: v })}
+              />
+            </div>
+          </section>
+        </TabsContent>
+
+        {/* ── Edge ── */}
+        <TabsContent value="edge" className="space-y-5 mt-4">
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Edge Worker</h3>
+            <p className="text-xs text-muted-foreground">
+              Optional. Powers the search feature and R2 snapshot cache.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="edge-url">Worker URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="edge-url"
+                  value={edgeUrl}
+                  onChange={e => setEdgeUrl(e.target.value)}
+                  placeholder="https://omot-edge.yourname.workers.dev"
+                />
+                <Button size="sm" onClick={() => save({ edgeUrl: edgeUrl || undefined })}>Save</Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="api-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  placeholder="Leave blank if no key is set"
+                />
+                <Button size="sm" onClick={() => save({ apiKey: apiKey || undefined })}>Save</Button>
+              </div>
+            </div>
+          </section>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
-function ButtonAppBar() {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const { config } = React.useContext(ConfigContext);
+// ─── AppBar ───────────────────────────────────────────────────────────────────
+
+function AppBar() {
   const navigate = useNavigate();
-  const hasEdge = Boolean(config?.edgeUrl);
+  const { config } = React.useContext(ConfigContext);
+  const [inputValue, setInputValue] = React.useState('');
+
+  const handleSearch = () => {
+    const user = parseUserName(inputValue.trim());
+    if (user) navigate(`/${user}`);
+  };
+
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar component="nav"
-        color='transparent'
-        sx={{ backdropFilter: "blur(40px)" }}>
-        <Toolbar>
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-            onClick={(_) => {
-              setIsOpen(true)
-            }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Drawer
-            anchor='left'
-            open={isOpen}
-            onClose={() => {
-              setIsOpen(false)
-            }}
-          >
-            <SideBar />
-          </Drawer>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            <Link href="/" color="inherit" underline='none'>
-              OMOT
-            </Link>
-          </Typography>
-          {hasEdge && (
-            <IconButton
-              size="large"
-              color="inherit"
-              aria-label="search archive"
-              onClick={() => navigate('/search')}
-            >
-              <SearchIcon />
-            </IconButton>
-          )}
-          <IconButton
-            size='large'
-            color='inherit'
-            aria-label='github'
-            href='https://github.com/ayanamists/oh-my-old-tweet'
-            target='_blank'>
-            <GitHubIcon />
-          </IconButton>
-          <IconButton
-            size='large'
-            color='inherit'
-            aria-label='github'
-            href='https://github.com/ayanamists/oh-my-old-tweet/wiki/About_CORS_Proxy'
-            target='_blank'>
-            <HelpIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-    </Box>
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center gap-3 px-4 max-w-5xl mx-auto">
+
+        {/* Logo */}
+        <button
+          onClick={() => navigate('/')}
+          className="font-bold text-base tracking-tight text-foreground hover:text-primary transition-colors shrink-0"
+        >
+          OMOT
+        </button>
+
+        <Separator orientation="vertical" className="h-5" />
+
+        {/* Username input */}
+        <div className="flex items-center gap-1 flex-1 max-w-xs">
+          <span className="text-muted-foreground text-sm select-none">@</span>
+          <Input
+            className="h-8 text-sm"
+            placeholder="username"
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          />
+          <Button size="sm" className="h-8 px-3 shrink-0" onClick={handleSearch}>
+            Go
+          </Button>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Search */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Search archive"
+                onClick={() => navigate('/search')}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {config?.edgeUrl ? 'Search archive' : 'Search (requires Edge Worker)'}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* GitHub */}
+        <Button variant="ghost" size="icon" aria-label="GitHub" asChild>
+          <a href="https://github.com/ayanamists/oh-my-old-tweet" target="_blank" rel="noreferrer">
+            <GithubIcon className="h-4 w-4" />
+          </a>
+        </Button>
+
+        {/* Help */}
+        <Button variant="ghost" size="icon" aria-label="Help / CORS Proxy docs" asChild>
+          <a href="https://github.com/ayanamists/oh-my-old-tweet/wiki/About_CORS_Proxy" target="_blank" rel="noreferrer">
+            <HelpCircle className="h-4 w-4" />
+          </a>
+        </Button>
+
+        {/* Settings */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Settings">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-80 sm:w-96 overflow-y-auto">
+            <SheetHeader className="mb-4">
+              <SheetTitle>Settings</SheetTitle>
+            </SheetHeader>
+            <SettingsPanel />
+          </SheetContent>
+        </Sheet>
+
+      </div>
+    </header>
   );
 }
+
+// ─── MainLayout ───────────────────────────────────────────────────────────────
+
+type MainLayoutProps = { children: React.ReactNode };
 
 function MainLayout({ children }: MainLayoutProps) {
-  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-  const theme = React.useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: prefersDarkMode ? 'dark' : 'light',
-          primary: {
-            main: '#1DA1F2'
-          }
-        },
-      }),
-    [prefersDarkMode]);
-
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <ButtonAppBar />
-      <Box component="main" color={'inherit'}>
-        <Toolbar />
-        <Box minHeight={'80vh'}
-          justifyItems={'center'}
-          justifyContent={'center'}
-          alignItems={'center'}
-          sx={{ display: 'grid' }}>
-          {children}
-        </Box>
-      </Box>
-    </ThemeProvider>);
+    <div className={cn('min-h-screen bg-background text-foreground')}>
+      <AppBar />
+      <main className="min-h-[calc(100vh-3.5rem)]">
+        {children}
+      </main>
+      <Toaster position="bottom-right" richColors />
+    </div>
+  );
 }
 
 export default MainLayout;

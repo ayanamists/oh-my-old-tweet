@@ -14,7 +14,6 @@ export default function Page() {
     }
   }, [user, navigate]);
   
-  console.log(user);
   return (user == null) ? null : (
     <MainLayout>
       <Timeline user={user} />

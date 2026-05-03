@@ -2,69 +2,69 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { parseUserName } from '../src/InputParser';
 import dynamic from 'next/dynamic';
+import { parseUserName } from '../src/InputParser';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 const MainLayout = dynamic(() => import('../src/Layout/MainLayout'), { ssr: false });
 
-function MarkBox({ text }: { text: string }) {
-  return <mark className="px-2 text-white bg-tw-blue text-white rounded">{text}</mark>
-}
-
 function MainPage() {
-  const [inputValue, setInputValue] = useState<string>("_iori_n");
+  const [inputValue, setInputValue] = useState('');
   const navigate = useNavigate();
 
-  const handleStart = () => { 
-    const user = parseUserName(inputValue);
-    navigate(`/${user}`);
+  const handleStart = () => {
+    const user = parseUserName(inputValue.trim());
+    if (user) navigate(`/${user}`);
   };
 
   return (
-    <div className='flex flex-col'>
-        <div className='mx-auto max-w-screen-sm text-center'>
-          <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl">
-            Oh <MarkBox text='my' /> old <MarkBox text='tweet' />
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] px-4">
+      <div className="w-full max-w-md space-y-8 text-center">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
+            Oh{' '}
+            <span className="bg-primary text-primary-foreground px-2 rounded">my</span>
+            {' '}old{' '}
+            <span className="bg-primary text-primary-foreground px-2 rounded">tweet</span>
           </h1>
+          <p className="text-muted-foreground text-base">
+            Browse archived Twitter timelines from the Wayback Machine.
+          </p>
         </div>
-        <div className="flex max-w-screen-sm mx-auto">
-          <span className="inline-flex items-center px-3 text-sm
-          text-gray-900 bg-gray-200
-          border border-r-0 border-gray-300 rounded-l-md
-          dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
-            @
-          </span>
-          <input type="text" id="website-admin" className="
-          rounded-none
-          rounded-r-lg bg-gray-50 border text-gray-900 focus:ring-blue-500 focus:border-blue-500 block flex-1
-          min-w-0 text-sm border-gray-300 p-2.5
-          dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder={inputValue}
-            onChange={(evt) => {
-              setInputValue(evt.target.value ?? "");
-            }}
-            onKeyDown={(evt) => {
-              if (evt.key === 'Enter') {
-                handleStart();
-              }
-            }}
-          />
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center flex-1 border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <span className="px-3 text-sm text-muted-foreground bg-muted border-r border-input h-10 flex items-center select-none">
+              @
+            </span>
+            <input
+              type="text"
+              className="flex-1 h-10 px-3 text-sm bg-background outline-none placeholder:text-muted-foreground"
+              placeholder="username or profile URL"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleStart()}
+              autoFocus
+            />
+          </div>
+          <Button onClick={handleStart} disabled={!inputValue.trim()}>
+            Browse
+          </Button>
         </div>
-        <div className='mx-auto text-center my-4'>
-          <button className="bg-transparent hover:bg-tw-blue
-        font-semibold py-2 px-4 hover:text-white
-        border border-tw-blue hover:border-transparent rounded dark:border-gray-600
-        text-tw-blue dark:text-white"
-            onClick={handleStart}>
-            Start
-          </button>
-        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Try <button className="text-primary hover:underline" onClick={() => { setInputValue('_iori_n'); }}>@_iori_n</button> as an example.
+        </p>
       </div>
-    );
+    </div>
+  );
 }
 
 export default function page() {
-  return (<MainLayout>
-    <MainPage />
-  </MainLayout>);
+  return (
+    <MainLayout>
+      <MainPage />
+    </MainLayout>
+  );
 }

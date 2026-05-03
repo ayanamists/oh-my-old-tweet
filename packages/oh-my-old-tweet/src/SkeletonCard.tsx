@@ -1,19 +1,19 @@
-import { Box, Paper, Skeleton } from "@mui/material";
+import { Skeleton } from '../components/ui/skeleton';
 
 export function SkeletonCard() {
   return (
-    <Paper sx={{ p: 2, my: 2 }} data-testid="skeleton-card">
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-        <Skeleton variant="circular" width={40} height={40} sx={{ mr: 1 }} />
-        <Box sx={{ flex: 1 }}>
-          <Skeleton variant="text" width="40%" />
-          <Skeleton variant="text" width="25%" />
-        </Box>
-      </Box>
-      <Skeleton variant="text" />
-      <Skeleton variant="text" />
-      <Skeleton variant="text" width="80%" />
-    </Paper>
+    <div className="border rounded-lg p-4 my-3 space-y-3 bg-card" data-testid="skeleton-card">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </div>
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-4/5" />
+    </div>
   );
 }
 

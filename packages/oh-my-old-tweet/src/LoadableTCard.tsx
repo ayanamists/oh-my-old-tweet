@@ -1,10 +1,10 @@
 import { useCallback, useContext, useState } from "react";
 import { Post } from "twitter-data-parser";
 import { TCard } from "./TCard";
-import { Box, CircularProgress, Paper, Typography } from "@mui/material";
 import { FilterContext } from "./context/FilterContext";
 import useCachedFetch from "./useCachedFetch";
 import { getShareLink, MinimalCdxInfo } from "./Data";
+import { SkeletonCard } from "./SkeletonCard";
 
 export function LoadableTCard({ user, cdxItem, onProfileLoaded }: {
   user: string,
@@ -13,59 +13,54 @@ export function LoadableTCard({ user, cdxItem, onProfileLoaded }: {
 }) {
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const { tweetFilter } = useContext(FilterContext);
   const [shouldShow, setShouldShow] = useState(true);
 
-  const processPost = useCallback((p: Post) => {
-    setPost(p);
+  const processData = useCallback((p: Post | boolean) => {
     setLoading(false);
 
-    const isSameUser = p && p.user.userName === user;
-    if (onProfileLoaded && p && isSameUser) {
-      onProfileLoaded(p);
+    if (typeof p === 'boolean') {
+      if (!p) setFailed(true);
+      return;
     }
 
-    // Filter logic
-    const isReply = p.replyInfo !== undefined;
-    const isPost = !isReply;
+    setPost(p);
+
+    const isSameUser = p.user.userName === user;
+    if (onProfileLoaded && isSameUser) onProfileLoaded(p);
+
+    const isReply  = p.replyInfo !== undefined;
+    const isPost   = !isReply;
     const hasImage = p.images && p.images.length > 0;
 
-    // Content type filter
     const contentTypeMatch = (
       (isReply && tweetFilter.contentBelongTo.includes("reply")) ||
-      (isPost && tweetFilter.contentBelongTo.includes("post"))
+      (isPost  && tweetFilter.contentBelongTo.includes("post"))
     );
-
-    // Image filter
     const imageFilterMatch = !tweetFilter.mustContainImage || hasImage;
 
     setShouldShow(contentTypeMatch && imageFilterMatch && isSameUser);
-  }, [onProfileLoaded, tweetFilter]);
+  }, [onProfileLoaded, tweetFilter, user]);
 
-  useCachedFetch(cdxItem, processPost);
+  useCachedFetch(cdxItem, processData);
 
-  if (loading) {
+  if (loading) return <SkeletonCard />;
+
+  if (failed) {
     return (
-      <Paper sx={{ p: 2, my: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="caption" className="text-gray-500 dark:text-gray-400">
-            Loading from archive : {cdxItem.origUrl}
-          </Typography>
-          <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
-            <CircularProgress size={24} />
-          </Box>
-        </Box>
-      </Paper>
+      <div className="border border-destructive/30 rounded-lg px-4 py-3 my-3 bg-card text-muted-foreground text-sm flex items-center gap-2">
+        <span className="text-destructive text-base">⚠</span>
+        Failed to load this tweet from archive.
+      </div>
     );
   }
 
-  if (!shouldShow || !post) {
-    return null;
-  }
+  if (!shouldShow || !post) return null;
 
   return (
-    <Box sx={{ my: 2 }}>
+    <div className="my-3">
       <TCard p={post} shareLink={getShareLink(user, cdxItem)} />
-    </Box>
+    </div>
   );
 }

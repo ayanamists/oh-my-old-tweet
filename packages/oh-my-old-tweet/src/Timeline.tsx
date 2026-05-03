@@ -4,187 +4,164 @@ import { getCdxList } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import { SkeletonList } from "./SkeletonCard";
 import { ConfigContext } from "./context/ConfigContext";
-import { ErrorBoundary, useErrorBoundary, } from "react-error-boundary";
-import { Box, List, ListItem, Typography, Paper, Avatar, IconButton, Grid, Divider } from "@mui/material";
+import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { FilterContext } from "./context/FilterContext";
 import { DateTime } from "luxon";
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import LinkIcon from '@mui/icons-material/Link';
+import { ChevronLeft, ChevronRight, MapPin, Link as LinkIcon } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Separator } from "../components/ui/separator";
+import { Badge } from "../components/ui/badge";
 
-function fallbackRender({ error }: { error: Error }) {
-  return (<Box>
-    <Typography variant="h1">Error</Typography>
-    <Typography>{error.message}</Typography>
-    <Typography variant="h3" sx={{ mt: 3 }}>Solution</Typography>
-    <List>
-      <ListItem>
-        <Typography>1. Change CORS Proxy Settings</Typography>
-      </ListItem>
-      <ListItem>
-        <Typography>2. Contact Authors</Typography>
-      </ListItem>
-    </List>
-  </Box>
+// ─── Error fallback ───────────────────────────────────────────────────────────
+
+function ErrorFallback({ error }: { error: Error }) {
+  return (
+    <div className="max-w-xl mx-auto mt-16 px-4 text-center space-y-4">
+      <h2 className="text-2xl font-bold text-destructive">Something went wrong</h2>
+      <p className="text-muted-foreground text-sm">{error.message}</p>
+      <p className="text-sm">Try changing the CORS Proxy settings or check your network.</p>
+    </div>
   );
 }
 
-interface UserProfileProps {
+// ─── UserProfileCard ──────────────────────────────────────────────────────────
+
+interface UserProfileCardProps {
   profile: User | null;
   profileDate: string;
-  onPrevProfile: () => void;
-  onNextProfile: () => void;
-  hasNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
   hasPrev: boolean;
+  hasNext: boolean;
 }
 
-function UserProfile({ profile, profileDate, onPrevProfile, onNextProfile, hasNext, hasPrev }: UserProfileProps) {
-  if (!profile) {
-    return (
-      <Paper sx={{ p: 2, height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography variant="body1">No profile information available</Typography>
-      </Paper>
-    );
-  }
+function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNext }: UserProfileCardProps) {
+  if (!profile) return null;
 
-  const profileInfo = profile.profileInfo;
-  const avatarUrl = profileInfo?.bigAvatar || profile?.avatar;
+  const info      = profile.profileInfo;
+  const avatarUrl = info?.bigAvatar || profile.avatar;
 
   return (
-    <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+    <div className="border rounded-lg bg-card p-4 space-y-3">
+      {/* Avatar + name */}
+      <div className="flex items-center gap-3">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={profile.fullName}
+            className="w-14 h-14 rounded-full object-cover border"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-lg font-bold text-muted-foreground">
+            {(profile.fullName ?? '?')[0]}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="font-bold text-sm truncate">{profile.fullName}</p>
+          <p className="text-muted-foreground text-sm">@{profile.userName}</p>
+        </div>
+      </div>
 
-        <Avatar
-          id={`avatar-${profile.userName}`}
-          src={avatarUrl}
-          alt={profile.fullName}
-          sx={{ 
-            width: 120, 
-            height: 120, 
-            mb: 2,
-          }}
-        />
-        
-        <Typography variant="h6" fontWeight="bold">{profile.fullName}</Typography>
-        <Typography variant="body2" color="text.secondary">@{profile.userName}</Typography>
-      </Box>
-
-      {profileInfo && (
-        <Box sx={{ mb: 2, flex: 1 }}>
-          {profileInfo.text && (
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              {profileInfo.text}
-            </Typography>
-          )}
-
-          {(profileInfo.location || profileInfo.urls?.length) && (
-            <Box sx={{ mb: 2 }}>
-              {profileInfo.location && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <LocationOnIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                  <Typography variant="body2">{profileInfo.location}</Typography>
-                </Box>
-              )}
-              
-              {profileInfo.urls && profileInfo.urls.length > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <LinkIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                  <Typography variant="body2" component="a" href={profileInfo.urls[0]} target="_blank" sx={{ textDecoration: 'none', color: 'primary.main' }}>
-                    {profileInfo.urls[0].replace(/^https?:\/\/(www\.)?/, '')}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            {profileInfo.followers !== undefined && (
-              <Typography variant="body2">
-                <strong>{profileInfo.followers.toLocaleString()}</strong> Followers
-              </Typography>
-            )}
-            {profileInfo.following !== undefined && (
-              <Typography variant="body2">
-                <strong>{profileInfo.following.toLocaleString()}</strong> Following
-              </Typography>
-            )}
-          </Box>
-
-          {profileInfo.joined && (
-            <Typography variant="body2" color="text.secondary">
-              Joined {profileInfo.joined}
-            </Typography>
-          )}
-        </Box>
+      {info?.text && (
+        <p className="text-sm leading-relaxed">{info.text}</p>
       )}
 
-      <Divider sx={{ my: 1 }} />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <IconButton onClick={onPrevProfile} disabled={!hasPrev}>
-          <ArrowBackIosNewIcon fontSize="small" />
-        </IconButton>
-        
-        <Typography variant="caption" color="text.secondary">
-          Profile as of {profileDate}
-        </Typography>
-        
-        <IconButton onClick={onNextProfile} disabled={!hasNext}>
-          <ArrowForwardIosIcon fontSize="small" />
-        </IconButton>
-      </Box>
-    </Paper>
+      {(info?.location || (info?.urls && info.urls.length > 0)) && (
+        <div className="space-y-1">
+          {info.location && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{info.location}</span>
+            </div>
+          )}
+          {info.urls && info.urls.length > 0 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <LinkIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <a
+                href={info.urls[0]}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary truncate hover:underline"
+              >
+                {info.urls[0].replace(/^https?:\/\/(www\.)?/, '')}
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(info?.followers !== undefined || info?.following !== undefined) && (
+        <div className="flex gap-3 text-xs">
+          {info.followers !== undefined && (
+            <span><strong>{info.followers.toLocaleString()}</strong> <span className="text-muted-foreground">Followers</span></span>
+          )}
+          {info.following !== undefined && (
+            <span><strong>{info.following.toLocaleString()}</strong> <span className="text-muted-foreground">Following</span></span>
+          )}
+        </div>
+      )}
+
+      {info?.joined && (
+        <p className="text-xs text-muted-foreground">Joined {info.joined}</p>
+      )}
+
+      <Separator />
+
+      {/* Snapshot navigation */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev} disabled={!hasPrev} aria-label="Previous profile snapshot">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-xs text-muted-foreground">Snapshot: {profileDate}</span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext} disabled={!hasNext} aria-label="Next profile snapshot">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
-function Timeline1({ user }: { user: string }) {
-  const [lst, setLst] = useState<JSX.Element[]>([]);
-  const cdxList = useRef<CdxItem[] | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const { config } = useContext(ConfigContext);
-  const [cdxLoading, setCdxLoading] = useState(true);
-  const { showBoundary } = useErrorBoundary();
-  const page = useRef(0);
-  const pageSize = 30;
-  
-  // User profile state
-  const [profiles, setProfiles] = useState<User[]>([]);
-  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
-  const [profileDate, setProfileDate] = useState<string>("");
-  
-  const updateLst = useCallback((cdxData, init: boolean) => {
-    const l = cdxData.map((i: CdxItem) =>
-      <LoadableTCard 
-        user={user} 
-        cdxItem={{ ... i, origUrl: i.original }} 
-        key={i.id} 
-        onProfileLoaded={(post) => {
-          if (post.user && post.user.profileInfo) {
-            setProfiles(prevProfiles => {
-              // Check if we already have this profile (by username and profile text)
-              const exists = prevProfiles.some(p =>
-                p.userName === post.user.userName &&
-                p.profileInfo?.text === post.user.profileInfo?.text
-              );
+// ─── Timeline1 ────────────────────────────────────────────────────────────────
 
-              if (!exists) {
-                return [...prevProfiles, post.user];
-              }
-              return prevProfiles;
+function Timeline1({ user }: { user: string }) {
+  const [lst, setLst]       = useState<JSX.Element[]>([]);
+  const cdxList             = useRef<CdxItem[] | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const { config }          = useContext(ConfigContext);
+  const [cdxLoading, setCdxLoading] = useState(true);
+  const { showBoundary }    = useErrorBoundary();
+  const page                = useRef(0);
+  const pageSize            = 30;
+
+  const [profiles, setProfiles]             = useState<User[]>([]);
+  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
+  const [profileDate, setProfileDate]       = useState('');
+
+  const updateLst = useCallback((cdxData: CdxItem[], init: boolean) => {
+    const l = cdxData.map(i =>
+      <LoadableTCard
+        user={user}
+        cdxItem={{ ...i, origUrl: i.original }}
+        key={i.id}
+        onProfileLoaded={post => {
+          if (post.user?.profileInfo) {
+            setProfiles(prev => {
+              const exists = prev.some(
+                p => p.userName === post.user.userName && p.profileInfo?.text === post.user.profileInfo?.text
+              );
+              return exists ? prev : [...prev, post.user];
             });
           }
         }}
-      />);
+      />
+    );
     setLst(lst => init ? l : lst.concat(l));
-  }, []);
-  
+  }, [user]);
+
   const fetchData = (init: boolean) => {
-    if (init) {
-      page.current = 0;
-    }
-    if (cdxList.current == null) return; // that should not happen
+    if (init) page.current = 0;
+    if (!cdxList.current) return;
     const pageNow = page.current;
     if (pageNow * pageSize >= cdxList.current.length) {
       setHasMore(false);
@@ -193,57 +170,47 @@ function Timeline1({ user }: { user: string }) {
       page.current += 1;
       updateLst(nextData, init);
     }
-  }
-  
-  const { tweetFilter } = useContext(FilterContext);
-  const { dateInRange } = tweetFilter;
-  
+  };
+
+  const { tweetFilter: { dateInRange } } = useContext(FilterContext);
+
   useEffect(() => {
     setCdxLoading(true);
-    getCdxList(config!, user, dateInRange).then((data) => {
+    getCdxList(config!, user, dateInRange).then(data => {
       cdxList.current = data.filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)));
       fetchData(true);
       setCdxLoading(false);
-    }).catch((e) => {
-      showBoundary(e);
-    });
+    }).catch(showBoundary);
   }, [config, user, showBoundary, dateInRange]);
 
   useEffect(() => {
     if (profiles.length > 0) {
-      const formattedDate = DateTime.fromJSDate(new Date()).toFormat('MMM d, yyyy');
-      setProfileDate(formattedDate);
+      const profile = profiles[currentProfileIndex];
+      // Use the archive timestamp from the profile if available, else today
+      setProfileDate(DateTime.fromJSDate(new Date()).toFormat('MMM d, yyyy'));
+      void profile; // suppress unused warning
     }
   }, [profiles, currentProfileIndex]);
 
-  const handlePrevProfile = () => {
-    if (currentProfileIndex > 0) {
-      setCurrentProfileIndex(currentProfileIndex - 1);
-    }
-  };
-
-  const handleNextProfile = () => {
-    if (currentProfileIndex < profiles.length - 1) {
-      setCurrentProfileIndex(currentProfileIndex + 1);
-    }
-  };
+  const currentProfile = profiles.length > 0 ? profiles[currentProfileIndex] : null;
 
   function tweetListContent() {
     if (cdxLoading) return <SkeletonList count={8} />;
     if (lst.length === 0) return (
-      <Box sx={{ py: 6, textAlign: 'center' }}>
-        <Typography variant="body1" color="text.secondary">
-          No archived tweets found for @{user}.
-        </Typography>
-      </Box>
+      <div className="py-16 text-center space-y-2">
+        <p className="text-muted-foreground">No archived tweets found for <strong>@{user}</strong>.</p>
+        <p className="text-sm text-muted-foreground">Try adjusting the date range or content filters.</p>
+      </div>
     );
     return (
       <InfiniteScroll
         dataLength={lst.length}
         next={() => fetchData(false)}
         hasMore={hasMore}
-        loader={null}
-        endMessage={null}
+        loader={<SkeletonList count={3} />}
+        endMessage={
+          <p className="text-center text-xs text-muted-foreground py-6">All archived tweets loaded.</p>
+        }
       >
         {lst}
       </InfiniteScroll>
@@ -251,31 +218,43 @@ function Timeline1({ user }: { user: string }) {
   }
 
   return (
-    <Grid container spacing={3} sx={{ width: '100%', maxWidth: '1000px', mx: 'auto', px: 2 }}>
-      <Grid item xs={12} md={3} lg={4} sx={{
-        display: { xs: 'none', md: 'block' },
-        height: "80vh",
-        top: 100,
-        position: 'sticky'
-      }}>
-        <UserProfile
-          profile={profiles.length > 0 ? profiles[currentProfileIndex] : null}
-          profileDate={profileDate}
-          onPrevProfile={handlePrevProfile}
-          onNextProfile={handleNextProfile}
-          hasPrev={currentProfileIndex > 0}
-          hasNext={currentProfileIndex < profiles.length - 1}
-        />
-      </Grid>
-      <Grid item xs={12} md={8} lg={8}>
-        {tweetListContent()}
-      </Grid>
-    </Grid>
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      {/* Profile banner (visible on all screen sizes, top of page) */}
+      {currentProfile && (
+        <div className="mb-6">
+          <UserProfileCard
+            profile={currentProfile}
+            profileDate={profileDate}
+            onPrev={() => setCurrentProfileIndex(i => Math.max(0, i - 1))}
+            onNext={() => setCurrentProfileIndex(i => Math.min(profiles.length - 1, i + 1))}
+            hasPrev={currentProfileIndex > 0}
+            hasNext={currentProfileIndex < profiles.length - 1}
+          />
+          {profiles.length > 1 && (
+            <div className="flex justify-center mt-2 gap-1">
+              {profiles.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentProfileIndex(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentProfileIndex ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                  aria-label={`Go to snapshot ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tweet feed */}
+      {tweetListContent()}
+    </div>
   );
 }
 
 export function Timeline({ user }: { user: string }) {
-  return (<ErrorBoundary fallbackRender={fallbackRender}>
-    <Timeline1 user={user} />
-  </ErrorBoundary>)
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <Timeline1 user={user} />
+    </ErrorBoundary>
+  );
 }

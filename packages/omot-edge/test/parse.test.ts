@@ -35,4 +35,21 @@ describe('parsePostFromUrl', () => {
     const post = await parsePostFromUrl('<html><body>nothing</body></html>', ARCHIVE_URL);
     expect(post).toBeUndefined();
   });
+
+  // Forces the JSON.parse branch in parsePost to fail and exercises the full
+  // HTML → parseDOM → extractFromNewArchiveFormat path through the linkedom
+  // backend wired up in src/parse.ts. Without that wiring the Worker raises
+  // "jsdom.VirtualConsole is not a constructor" in production.
+  it('parses an archive.org HTML payload via the linkedom DOM backend', async () => {
+    const html = `<!doctype html>
+<html><body>
+  <div class="tweet-container"></div>
+  <div id="jsonview"><pre>${JSON_PAYLOAD}</pre></div>
+</body></html>`;
+    const post = await parsePostFromUrl(html, ARCHIVE_URL);
+    expect(post).toBeDefined();
+    expect(post?.id).toBe('523389174242488320');
+    expect(post?.text).toBe('just setting up my twttr');
+    expect(post?.user.userName).toBe('jack');
+  });
 });

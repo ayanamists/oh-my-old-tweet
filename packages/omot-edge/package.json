@@ -20,6 +20,7 @@
     "wrangler": "^4.0.0"
   },
   "dependencies": {
+    "linkedom": "^0.18.5",
     "twitter-data-parser": "^1.0.0"
   }
 }

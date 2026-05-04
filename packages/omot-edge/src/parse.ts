@@ -1,8 +1,14 @@
+import { DOMParser as LinkedomDOMParser } from 'linkedom';
+import { setDOMBackend } from 'twitter-data-parser';
 import type { Post } from 'twitter-data-parser';
 
-// Extracts ArchiveTweetInfo from an archive.org URL, then calls parsePost.
-// Task 10 will make this work under the Workers runtime by swapping out the
-// DOM parser backend (linkedom instead of jsdom/DOMParser).
+// Cloudflare Workers expose neither jsdom nor a native DOMParser, so we
+// register linkedom as the DOM backend at module load. Module side-effects
+// run before any parsePostFromUrl call below, so the registration is in
+// place by the time the parser asks for a Document.
+const linkedomParser = new LinkedomDOMParser();
+setDOMBackend((html) => linkedomParser.parseFromString(html, 'text/html') as unknown as Document);
+
 export async function parsePostFromUrl(
   html: string,
   archiveUrl: string,

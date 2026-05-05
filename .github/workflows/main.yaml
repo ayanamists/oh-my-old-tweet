@@ -1,35 +1,31 @@
-name: Node.js CI
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build:
-
+  build-and-test:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-      - name: Run install
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install # will run `yarn install` command
-      - name: Build production bundle
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: build # will run `yarn build:prod` command
-      # - name: Test
-      #   uses: borales/actions-yarn@v4
-      #   with:
-      #     cmd: test # will run `yarn test` command
+          node-version: '22'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # `yarn build` produces twitter-data-parser/dist and react-tweet-card/lib,
+      # which the oh-my-old-tweet and omot-edge unit tests import from. It also
+      # exercises the Next.js production build path.
+      - name: Build all packages
+        run: yarn build
+
+      - name: Run tests
+        run: yarn test

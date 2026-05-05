@@ -60,6 +60,10 @@ describe('handleSnapshot', () => {
     const res = await handleSnapshot(req, makeEnv(), makeCtx());
     expect(res.status).toBe(204);
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    // Authorization must be advertised in Allow-Headers, otherwise browsers
+    // reject the cross-origin Bearer-token preflight and the frontend
+    // silently falls back to the slow legacy CORS proxy on every tweet.
+    expect(res.headers.get('Access-Control-Allow-Headers') ?? '').toMatch(/\bAuthorization\b/i);
   });
 
   it('returns cached post on R2 hit without calling fetch', async () => {

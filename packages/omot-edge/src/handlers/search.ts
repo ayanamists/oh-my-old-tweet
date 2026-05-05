@@ -3,6 +3,9 @@ import type { Env } from '../types';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  // Authorization must be in Allow-Headers so browsers don't block the
+  // Bearer-token preflight on the cross-origin /search call.
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
 };
 
 export async function handleSearch(request: Request, env: Env): Promise<Response> {

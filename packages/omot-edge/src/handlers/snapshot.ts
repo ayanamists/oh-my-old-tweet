@@ -6,7 +6,10 @@ import { upsertTweet, logAccess } from '../db';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  // Authorization must be in Allow-Headers — without it, browsers block the
+  // Bearer-token preflight and the frontend silently falls back to the
+  // legacy CORS proxy archive.org path on every tweet.
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
 };
 
 export async function handleSnapshot(

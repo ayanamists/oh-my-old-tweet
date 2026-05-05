@@ -62,11 +62,12 @@ describe('handleCdx', () => {
     expect(res.status).toBe(400);
   });
 
-  it('responds 204 with CORS headers for OPTIONS', async () => {
+  it('responds 204 with CORS headers for OPTIONS, including Authorization', async () => {
     const req = new Request('https://edge.example.com/cdx?user=jack', { method: 'OPTIONS' });
     const res = await handleCdx(req, makeEnv(), makeCtx());
     expect(res.status).toBe(204);
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(res.headers.get('Access-Control-Allow-Headers') ?? '').toMatch(/\bAuthorization\b/i);
   });
 
   it('serves a fresh cached body without calling fetch (X-Cache: HIT)', async () => {

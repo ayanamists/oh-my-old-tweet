@@ -133,6 +133,7 @@ function Timeline1({ user }: { user: string }) {
   const { showBoundary }    = useErrorBoundary();
   const page                = useRef(0);
   const pageSize            = 30;
+  const containerRef        = useRef<HTMLDivElement | null>(null);
 
   const [profiles, setProfiles]             = useState<User[]>([]);
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
@@ -159,7 +160,7 @@ function Timeline1({ user }: { user: string }) {
     setLst(lst => init ? l : lst.concat(l));
   }, [user]);
 
-  const fetchData = (init: boolean) => {
+  const fetchData = useCallback((init: boolean) => {
     if (init) page.current = 0;
     if (!cdxList.current) return;
     const pageNow = page.current;
@@ -170,7 +171,7 @@ function Timeline1({ user }: { user: string }) {
       page.current += 1;
       updateLst(nextData, init);
     }
-  };
+  }, [updateLst]);
 
   const { tweetFilter: { dateInRange } } = useContext(FilterContext);
 
@@ -191,6 +192,34 @@ function Timeline1({ user }: { user: string }) {
       void profile; // suppress unused warning
     }
   }, [profiles, currentProfileIndex]);
+
+  // If the current page leaves nothing visible (every card collapsed by
+  // the filter, or the list is shorter than the viewport), InfiniteScroll's
+  // scroll-bottom trigger never fires and the user sees an empty page that
+  // never advances. Watch the container and pull the next page when it fits
+  // entirely within the viewport.
+  useEffect(() => {
+    if (!hasMore || cdxLoading) return;
+    const node = containerRef.current;
+    if (!node) return;
+
+    let cancelled = false;
+    const check = () => {
+      if (cancelled) return;
+      const rect = node.getBoundingClientRect();
+      if (rect.bottom <= window.innerHeight) fetchData(false);
+    };
+
+    const raf = requestAnimationFrame(check);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null;
+    ro?.observe(node);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
+  }, [lst.length, hasMore, cdxLoading, fetchData]);
 
   const currentProfile = profiles.length > 0 ? profiles[currentProfileIndex] : null;
 
@@ -218,7 +247,7 @@ function Timeline1({ user }: { user: string }) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div ref={containerRef} className="max-w-4xl mx-auto px-4 py-6">
       {/* Profile banner (visible on all screen sizes, top of page) */}
       {currentProfile && (
         <div className="mb-6">

@@ -19,6 +19,22 @@ async function tryEdgeWorker(edgeUrl: string, archiveUrl: string, apiKey?: strin
   }
 }
 
+async function tryEdgeCdx(edgeUrl: string, user: string, apiKey?: string): Promise<CdxItem[] | undefined> {
+  try {
+    const endpoint = `${edgeUrl.replace(/\/$/, '')}/cdx?user=${encodeURIComponent(user)}`;
+    const headers: HeadersInit = apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {};
+    // Edge fetches archive.org with R2 stale-while-revalidate caching, so a
+    // long timeout here only really matters for the cold-cache case.
+    const res = await fetch(endpoint, { signal: AbortSignal.timeout(45_000), headers });
+    if (!res.ok) return undefined;
+    const rows = await res.json() as string[][];
+    if (!Array.isArray(rows)) return undefined;
+    return rows.map(parseCdxItem);
+  } catch {
+    return undefined;
+  }
+}
+
 async function parseMaybeInWorker(html: string, meta: ArchiveTweetInfo): Promise<Post | undefined> {
   if (typeof Worker !== 'undefined') {
     try {
@@ -110,6 +126,29 @@ export async function getCdxList(config: CorsProxyConfig, user: string, interval
   console.log(`Fetching ${tasks.length} intervals for user ${user}`);
   for (const task of tasks) {
     console.log(`Fetching interval ${task.start?.toFormat('yyyyMMddHHmmss')} - ${task.end?.toFormat('yyyyMMddHHmmss')}`);
+  }
+
+  // Edge fast path: when configured, the worker proxies archive.org's CDX
+  // with R2 stale-while-revalidate caching, returning the user's full
+  // timeline in a single call. This bypasses the legacy CORS proxy which
+  // routinely 503s on cold archive.org calls (>30s upstream).
+  if (config.edgeUrl) {
+    const edgeRows = await tryEdgeCdx(config.edgeUrl, user, config.apiKey);
+    if (edgeRows !== undefined) {
+      const merged = cdxCache.has(user)
+        ? [...cdxCache.get(user)!.cdxList, ...edgeRows]
+        : [...edgeRows];
+      const uniqueCdxList = uniqBy(merged, (i) => i.id);
+      cdxCache.set(user, {
+        user,
+        cdxList: uniqueCdxList,
+        currentInterval: cdxCache.has(user)
+          ? maxInterval(cdxCache.get(user)!.currentInterval, interval)
+          : interval,
+      });
+      return uniqueCdxList;
+    }
+    // Edge unreachable / non-2xx — fall through to per-interval CORS proxy path.
   }
 
   const newCdxList: CdxItem[] = [];

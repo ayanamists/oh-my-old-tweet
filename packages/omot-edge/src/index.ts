@@ -30,6 +30,15 @@ export default {
       return handleSearch(request, env);
     }
 
+    if (url.pathname === '/cdx') {
+      if (request.method !== 'OPTIONS') {
+        const deny = checkApiKey(request, env);
+        if (deny) return deny;
+      }
+      const { handleCdx } = await import('./handlers/cdx');
+      return handleCdx(request, env, ctx);
+    }
+
     return new Response('Not Found', { status: 404 });
   },
 

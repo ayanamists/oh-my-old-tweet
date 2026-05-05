@@ -18,7 +18,10 @@ describe('CDX request includes collapse=digest', () => {
       DateTime.fromISO('2020-01-01'),
       DateTime.fromISO('2020-01-02'),
     );
-    await getCdxList(defaultConfig, 'testuser', interval);
+    // Edge path bypasses this URL composition; assert legacy proxy behaviour
+    // explicitly by disabling edgeUrl. The edge worker's own test pins the
+    // collapse=digest contract on the archive.org subrequest it makes.
+    await getCdxList({ ...defaultConfig, edgeUrl: undefined }, 'testuser', interval);
 
     expect(capturedUrls.length).toBeGreaterThan(0);
     const proxied = capturedUrls[0];

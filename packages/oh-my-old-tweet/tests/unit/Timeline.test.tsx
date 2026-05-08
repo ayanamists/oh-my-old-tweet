@@ -67,11 +67,16 @@ function makeCdxItem(id: string, dateIso: string) {
   return { id, original: `https://twitter.com/foo/status/${id}`, date: new Date(dateIso) };
 }
 
-function makePost(id: string, opts: { user?: string; isReply?: boolean } = {}): Post {
+function makePost(id: string, opts: { user?: string; isReply?: boolean; bio?: string } = {}): Post {
   const userName = opts.user ?? 'foo';
   return {
     id,
-    user: { userName, fullName: userName, avatar: '' },
+    user: {
+      userName,
+      fullName: userName,
+      avatar: '',
+      ...(opts.bio !== undefined ? { profileInfo: { text: opts.bio } } : {}),
+    },
     text: `tweet ${id}`,
     date: new Date('2020-06-01'),
     images: [],
@@ -134,6 +139,37 @@ describe('Timeline — subtle filter/scroll behaviour', () => {
 
     // Filter still excludes everything → no visible tweet cards.
     expect(screen.queryAllByTestId('tcard')).toHaveLength(0);
+  });
+
+  it('clears the profile sidebar when navigating from user A to user B', async () => {
+    // Repro: open user A -> topbar typed user B. Profile column must reflect
+    // user B, not the leftover snapshot from A. Without resetting the
+    // accumulated `profiles` state on `user` change, A's bio sticks around.
+    const itemsA = [makeCdxItem('a1', '2020-06-01')];
+    const itemsB = [makeCdxItem('b1', '2020-06-01')];
+    mockPostMap.set('a1', makePost('a1', { user: 'alice', bio: 'I am alice' }));
+    mockPostMap.set('b1', makePost('b1', { user: 'bob', bio: 'I am bob' }));
+    mockCdxList.fn.mockImplementation((_config: unknown, user: string) =>
+      Promise.resolve(user === 'alice' ? itemsA : itemsB),
+    );
+
+    const { Timeline } = await import('../../src/Timeline');
+
+    const { rerender } = render(
+      <Wrap filter={baseFilter}><Timeline user="alice" /></Wrap>,
+    );
+
+    // Alice's profile snapshot is loaded into the sidebar.
+    await waitFor(() => expect(screen.queryByText('I am alice')).not.toBeNull());
+
+    // Navigate to bob (mirrors the topbar submit → /:user route change).
+    rerender(<Wrap filter={baseFilter}><Timeline user="bob" /></Wrap>);
+
+    // Sidebar must switch over: bob shown, alice gone (not just appended).
+    await waitFor(() => {
+      expect(screen.queryByText('I am bob')).not.toBeNull();
+      expect(screen.queryByText('I am alice')).toBeNull();
+    });
   });
 
   it('changing tweetFilter re-evaluates already-loaded LoadableTCards', async () => {

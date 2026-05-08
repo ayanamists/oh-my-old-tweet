@@ -177,6 +177,12 @@ function Timeline1({ user }: { user: string }) {
 
   useEffect(() => {
     setCdxLoading(true);
+    // Drop the previous user's accumulated profile snapshots before fetching.
+    // Otherwise switching A -> B leaves A's avatar/bio in the sidebar until
+    // (and even after) B's posts append their own profile.
+    setProfiles([]);
+    setCurrentProfileIndex(0);
+    setProfileDate('');
     getCdxList(config!, user, dateInRange).then(data => {
       cdxList.current = data.filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)));
       fetchData(true);

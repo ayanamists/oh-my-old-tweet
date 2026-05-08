@@ -15,7 +15,7 @@ export default function Page() {
     const minimalCdxInfo = { timestamp, mimetype: decodeURIComponent(mimetype), origUrl, id };
     return (
       <MainLayout>
-        <div className="w-full max-w-2xl mx-auto px-4 py-6">
+        <div className="mx-auto w-full max-w-2xl px-3 py-4 sm:px-4 sm:py-6">
           <LoadableTCard user={user} cdxItem={minimalCdxInfo} />
         </div>
       </MainLayout>

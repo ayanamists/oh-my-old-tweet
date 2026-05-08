@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { getUrl, defaultConfig } from '../../src/corsUrl';
+import { afterEach, describe, it, expect } from 'vitest';
+import { getDefaultConfig, getUrl, defaultConfig } from '../../src/corsUrl';
+
+afterEach(() => {
+  localStorage.clear();
+  window.history.replaceState({}, '', '/');
+});
 
 describe('getUrl', () => {
   const target = 'https://web.archive.org/cdx/search/cdx?url=twitter.com/jack/status';
@@ -21,5 +26,27 @@ describe('getUrl', () => {
   it('inserts a / between prefix and target when prefix has neither', () => {
     const cfg = { mode: 1, prefix: 'https://proxy.example.com', urlEncoding: false };
     expect(getUrl(cfg, target)).toBe('https://proxy.example.com/' + target);
+  });
+});
+
+describe('getDefaultConfig', () => {
+  it('does not ship a default API key in source config', () => {
+    expect(defaultConfig.apiKey).toBeUndefined();
+    expect(getDefaultConfig().apiKey).toBeUndefined();
+  });
+
+  it('uses apikey from the URL query at runtime', () => {
+    window.history.replaceState({}, '', '/?apikey=urlsecret');
+    expect(getDefaultConfig().apiKey).toBe('urlsecret');
+  });
+
+  it('uses apikey from the hash query at runtime', () => {
+    window.history.replaceState({}, '', '/#/jack?apikey=hashsecret');
+    expect(getDefaultConfig().apiKey).toBe('hashsecret');
+  });
+
+  it('keeps an API key saved through settings', () => {
+    localStorage.setItem('omot-cors-config', JSON.stringify({ ...defaultConfig, apiKey: 'savedsecret' }));
+    expect(getDefaultConfig().apiKey).toBe('savedsecret');
   });
 });

@@ -4,21 +4,21 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 33% 98%;
+    --foreground: 222 47% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 201 96% 57%;
-    --primary: 201 96% 57%;
+    --card-foreground: 222 47% 8%;
+    --border: 214 24% 88%;
+    --input: 214 24% 88%;
+    --ring: 201 90% 45%;
+    --primary: 201 90% 43%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 22% 94%;
+    --secondary-foreground: 222 43% 12%;
+    --muted: 210 22% 94%;
+    --muted-foreground: 216 13% 42%;
+    --accent: 204 70% 94%;
+    --accent-foreground: 206 84% 21%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --radius: 0.5rem;
@@ -51,5 +51,167 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+}
+
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+  .omot-tweet-card.react-tweet-card__container {
+    max-width: 100%;
+    min-width: 0;
+    border-color: hsl(var(--border));
+    border-radius: var(--radius);
+    padding: 1rem;
+    row-gap: 0.875rem;
+    box-shadow: 0 1px 2px hsl(222 47% 8% / 0.04);
+  }
+
+  .omot-tweet-card .react-tweet-card--header {
+    min-width: 0;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .omot-tweet-card .react-tweet-card--header > :first-child {
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .omot-tweet-card .react-tweet-card--icons {
+    flex-shrink: 0;
+    gap: 0.35rem;
+  }
+
+  .omot-tweet-card .react-tweet-card__author-name,
+  .omot-tweet-card .react-tweet-card__author-username {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0;
+  }
+
+  .omot-tweet-card .react-tweet-card__author-name > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .omot-tweet-card .react-tweet-card__tweet {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-size: 1rem;
+    line-height: 1.55;
+    letter-spacing: 0;
+  }
+
+  .omot-tweet-card .react-tweet-card--footer > p {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .omot-tweet-card .react-tweet-card__imageContainer {
+    max-width: 100%;
+  }
+
+  .omot-tweet-card .react-tweet-card__imageContent {
+    border-color: hsl(var(--border));
+    border-radius: var(--radius);
+  }
+
+  .omot-tweet-card .react-tweet-card__engagement {
+    width: auto;
+    max-width: 100%;
+    gap: 0.25rem 1rem;
+    justify-content: flex-start;
+    font-size: 0.875rem;
+  }
+
+  .omot-tweet-card .react-tweet-card--footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .omot-tweet-card .react-tweet-card--footer > p {
+    grid-column: 1;
+  }
+
+  .omot-tweet-card .react-tweet-card--footer .react-tweet-card__engagement-container {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .omot-tweet-card .react-tweet-card--footer > button {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 1;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    justify-self: end;
+    border-radius: var(--radius);
+    color: hsl(var(--muted-foreground));
+  }
+
+  .omot-tweet-card .react-tweet-card--footer > button svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .omot-tweet-card.react-tweet-card__container {
+      padding: 1.25rem;
+    }
+
+    .omot-tweet-card .react-tweet-card__tweet {
+      font-size: 1.0625rem;
+    }
   }
 }

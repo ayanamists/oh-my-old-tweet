@@ -19,7 +19,7 @@ const fakePost = {
   user: { userName: 'jack', fullName: 'Jack' },
 };
 
-const configWithEdge    = { ...defaultConfig, edgeUrl: 'https://omot-edge.example.com' };
+const configWithEdge    = { ...defaultConfig, edgeUrl: 'https://omot-edge.example.com', apiKey: undefined };
 const configWithEdgeKey = { ...configWithEdge, apiKey: 'mysecret' };
 const configNoEdge      = { ...defaultConfig, edgeUrl: undefined };
 

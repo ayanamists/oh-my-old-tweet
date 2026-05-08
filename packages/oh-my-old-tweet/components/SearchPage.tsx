@@ -33,11 +33,11 @@ async function fetchSearch(edgeUrl: string, q: string, user: string, apiKey?: st
 
 function NoEdgePrompt() {
   return (
-    <div role="alert" className="max-w-lg mx-auto mt-16 px-4 space-y-4 text-center">
+    <div role="alert" className="mx-auto mt-10 max-w-lg space-y-4 rounded-lg border bg-card px-4 py-8 text-center shadow-sm sm:mt-16 sm:px-6">
       <Info className="h-8 w-8 text-muted-foreground mx-auto" />
       <h2 className="text-lg font-semibold">Search requires the Edge Worker</h2>
       <p className="text-sm text-muted-foreground">
-        Deploy the <code className="bg-muted px-1 py-0.5 rounded text-xs">omot-edge</code> Cloudflare Worker and enter its URL in{' '}
+        Deploy the <code className="rounded bg-muted px-1 py-0.5 text-xs break-all">omot-edge</code> Cloudflare Worker and enter its URL in{' '}
         <strong>Settings → Edge</strong>.
       </p>
     </div>
@@ -59,11 +59,11 @@ function ResultsList({ results, searched }: { results: SearchResult[]; searched:
   }
 
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <p className="text-xs text-muted-foreground mb-3">
         {results.length} result{results.length !== 1 ? 's' : ''}{results.length === 50 ? ' (limit reached)' : ''}
       </p>
-      <div className="border rounded-lg divide-y overflow-hidden bg-card">
+      <div className="divide-y overflow-hidden rounded-lg border bg-card shadow-sm">
         {results.map((r, i) => {
           const date = new Date(r.snapshot_ts * 1000).toLocaleDateString();
           // Sanitize: use textContent instead of dangerouslySetInnerHTML
@@ -71,11 +71,11 @@ function ResultsList({ results, searched }: { results: SearchResult[]; searched:
           return (
             <button
               key={`${r.id}-${i}`}
-              className="w-full text-left px-4 py-3 hover:bg-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              className="w-full min-w-0 px-4 py-3 text-left transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
               onClick={() => navigate(`/${r.username}`)}
             >
-              <p className="text-sm line-clamp-2">{snippet}</p>
-              <p className="text-xs text-muted-foreground mt-1">@{r.username} · {date}</p>
+              <p className="line-clamp-2 break-words text-sm">{snippet}</p>
+              <p className="mt-1 break-words text-xs text-muted-foreground">@{r.username} · {date}</p>
             </button>
           );
         })}
@@ -117,7 +117,7 @@ function SearchForm({ onResults, onSearched }: { onResults: (r: SearchResult[]) 
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Search Archive</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Search Archive</h1>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -131,8 +131,8 @@ function SearchForm({ onResults, onSearched }: { onResults: (r: SearchResult[]) 
         />
       </div>
 
-      <div className="flex gap-3">
-        <div className="flex-1 space-y-1.5">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <Label htmlFor="search-user" className="text-xs text-muted-foreground">Username (optional)</Label>
           <Input
             id="search-user"
@@ -146,7 +146,7 @@ function SearchForm({ onResults, onSearched }: { onResults: (r: SearchResult[]) 
           <Button
             onClick={handleSearch}
             disabled={loading || (!q && !user)}
-            className="h-10 px-6"
+            className="h-10 w-full px-6 sm:w-auto"
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -183,7 +183,7 @@ export default function SearchPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+      <div className="mx-auto max-w-2xl space-y-8 px-4 py-6 sm:py-8">
         <SearchForm onResults={setResults} onSearched={() => setSearched(true)} />
         <ResultsList results={results} searched={searched} />
       </div>

@@ -16,6 +16,7 @@ export function TCard({ p, shareLink }: TCardProps) {
 
   return (
     <TweetCard
+      className="omot-tweet-card"
       author={{
         name,
         username: p.user.userName ?? "",

@@ -49,9 +49,9 @@ export function LoadableTCard({ user, cdxItem, onProfileLoaded }: {
 
   if (failed) {
     return (
-      <div className="border border-destructive/30 rounded-lg px-4 py-3 my-3 bg-card text-muted-foreground text-sm flex items-center gap-2">
+      <div className="my-3 flex min-w-0 items-center gap-2 rounded-lg border border-destructive/30 bg-card px-4 py-3 text-sm text-muted-foreground">
         <span className="text-destructive text-base">⚠</span>
-        Failed to load this tweet from archive.
+        <span className="min-w-0 break-words">Failed to load this tweet from archive.</span>
       </div>
     );
   }

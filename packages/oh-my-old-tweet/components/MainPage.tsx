@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import dynamic from 'next/dynamic';
 import { parseUserName } from '../src/InputParser';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 
 const MainLayout = dynamic(() => import('../src/Layout/MainLayout'), { ssr: false });
 
@@ -19,43 +18,45 @@ function MainPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] px-4">
-      <div className="w-full max-w-md space-y-8 text-center">
-        <div className="space-y-3">
-          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
-            Oh{' '}
-            <span className="bg-primary text-primary-foreground px-2 rounded">my</span>
-            {' '}old{' '}
-            <span className="bg-primary text-primary-foreground px-2 rounded">tweet</span>
+    <div className="mx-auto flex w-full max-w-xl flex-col px-4 py-10 sm:py-12 md:py-16">
+      <div className="space-y-6">
+        <div className="space-y-3 text-center sm:text-left">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Wayback timeline browser
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Oh my old tweet
           </h1>
-          <p className="text-muted-foreground text-base">
+          <p className="text-base leading-7 text-muted-foreground">
             Browse archived Twitter timelines from the Wayback Machine.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center flex-1 border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-            <span className="px-3 text-sm text-muted-foreground bg-muted border-r border-input h-10 flex items-center select-none">
-              @
-            </span>
-            <input
-              type="text"
-              className="flex-1 h-10 px-3 text-sm bg-background outline-none placeholder:text-muted-foreground"
-              placeholder="username or profile URL"
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleStart()}
-              autoFocus
-            />
+        <div className="rounded-lg border bg-card p-3 shadow-sm sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="flex h-11 shrink-0 items-center border-r border-input bg-muted px-3 text-sm text-muted-foreground select-none">
+                @
+              </span>
+              <input
+                type="text"
+                className="h-11 min-w-0 flex-1 bg-background px-3 text-sm outline-none placeholder:text-muted-foreground"
+                placeholder="username or profile URL"
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleStart()}
+                autoFocus
+              />
+            </div>
+            <Button className="h-11 w-full sm:w-auto" onClick={handleStart} disabled={!inputValue.trim()}>
+              Browse
+            </Button>
           </div>
-          <Button onClick={handleStart} disabled={!inputValue.trim()}>
-            Browse
-          </Button>
-        </div>
 
-        <p className="text-xs text-muted-foreground">
-          Try <button className="text-primary hover:underline" onClick={() => { setInputValue('_iori_n'); }}>@_iori_n</button> as an example.
-        </p>
+          <p className="mt-3 text-center text-xs text-muted-foreground sm:text-left">
+            Try <button className="font-medium text-primary hover:underline" onClick={() => { setInputValue('_iori_n'); }}>@_iori_n</button> as an example.
+          </p>
+        </div>
       </div>
     </div>
   );

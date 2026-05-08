@@ -17,9 +17,9 @@ import { Badge } from "../components/ui/badge";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
-    <div className="max-w-xl mx-auto mt-16 px-4 text-center space-y-4">
+    <div className="mx-auto mt-10 max-w-xl space-y-4 rounded-lg border bg-card px-4 py-8 text-center shadow-sm sm:mt-16 sm:px-6">
       <h2 className="text-2xl font-bold text-destructive">Something went wrong</h2>
-      <p className="text-muted-foreground text-sm">{error.message}</p>
+      <p className="break-words text-sm text-muted-foreground">{error.message}</p>
       <p className="text-sm">Try changing the CORS Proxy settings or check your network.</p>
     </div>
   );
@@ -43,46 +43,46 @@ function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNex
   const avatarUrl = info?.bigAvatar || profile.avatar;
 
   return (
-    <div className="border rounded-lg bg-card p-4 space-y-3">
+    <div className="min-w-0 space-y-3 overflow-hidden rounded-lg border bg-card p-4 shadow-sm sm:p-5">
       {/* Avatar + name */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         {avatarUrl ? (
           <img
             src={avatarUrl}
             alt={profile.fullName}
-            className="w-14 h-14 rounded-full object-cover border"
+            className="h-14 w-14 shrink-0 rounded-full border object-cover"
           />
         ) : (
-          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-lg font-bold text-muted-foreground">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-bold text-muted-foreground">
             {(profile.fullName ?? '?')[0]}
           </div>
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-bold text-sm truncate">{profile.fullName}</p>
-          <p className="text-muted-foreground text-sm">@{profile.userName}</p>
+          <p className="truncate text-sm text-muted-foreground">@{profile.userName}</p>
         </div>
       </div>
 
       {info?.text && (
-        <p className="text-sm leading-relaxed">{info.text}</p>
+        <p className="break-words text-sm leading-relaxed">{info.text}</p>
       )}
 
       {(info?.location || (info?.urls && info.urls.length > 0)) && (
         <div className="space-y-1">
           {info.location && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3 shrink-0" />
               <span className="truncate">{info.location}</span>
             </div>
           )}
           {info.urls && info.urls.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
+            <div className="flex min-w-0 items-center gap-1.5 text-xs">
               <LinkIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
               <a
                 href={info.urls[0]}
                 target="_blank"
                 rel="noreferrer"
-                className="text-primary truncate hover:underline"
+                className="min-w-0 truncate text-primary hover:underline"
               >
                 {info.urls[0].replace(/^https?:\/\/(www\.)?/, '')}
               </a>
@@ -92,7 +92,7 @@ function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNex
       )}
 
       {(info?.followers !== undefined || info?.following !== undefined) && (
-        <div className="flex gap-3 text-xs">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
           {info.followers !== undefined && (
             <span><strong>{info.followers.toLocaleString()}</strong> <span className="text-muted-foreground">Followers</span></span>
           )}
@@ -109,11 +109,11 @@ function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNex
       <Separator />
 
       {/* Snapshot navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex min-w-0 items-center justify-between gap-2">
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev} disabled={!hasPrev} aria-label="Previous profile snapshot">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="text-xs text-muted-foreground">Snapshot: {profileDate}</span>
+        <span className="min-w-0 truncate text-xs text-muted-foreground">Snapshot: {profileDate}</span>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext} disabled={!hasNext} aria-label="Next profile snapshot">
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -247,7 +247,7 @@ function Timeline1({ user }: { user: string }) {
   }
 
   return (
-    <div ref={containerRef} className="max-w-4xl mx-auto px-4 py-6">
+    <div ref={containerRef} className="mx-auto w-full max-w-2xl px-3 py-4 sm:px-4 sm:py-6">
       {/* Profile banner (visible on all screen sizes, top of page) */}
       {currentProfile && (
         <div className="mb-6">

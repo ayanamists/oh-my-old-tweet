@@ -10,6 +10,7 @@ export type CorsProxyConfig = {
 };
 
 const defaultPrefix = "https://cors-proxy.ayanamists.workers.dev/?target=";
+const defaultEdgeUrl = 'https://omot-edge.ayanamists.workers.dev';
 
 const key = "omot-cors-config";
 
@@ -18,15 +19,37 @@ export const defaultConfig: CorsProxyConfig = {
   prefix: defaultPrefix,
   urlEncoding: true,
   fallbacks: [],
-  edgeUrl: 'https://omot-edge.ayanamists.workers.dev',
+  edgeUrl: defaultEdgeUrl,
 };
+
+function getRuntimeApiKey(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+
+  const read = (params: URLSearchParams) =>
+    params.get('apikey') ?? params.get('apiKey') ?? params.get('api_key');
+
+  const searchValue = read(new URLSearchParams(window.location.search));
+  if (searchValue?.trim()) return searchValue.trim();
+
+  const hashQueryStart = window.location.hash.indexOf('?');
+  if (hashQueryStart !== -1) {
+    const hashValue = read(new URLSearchParams(window.location.hash.slice(hashQueryStart + 1)));
+    if (hashValue?.trim()) return hashValue.trim();
+  }
+
+  return undefined;
+}
 
 export function getDefaultConfig(): CorsProxyConfig {
   const loaded = localStorage.getItem(key);
-  if (loaded == null) return defaultConfig;
-  const parsed = JSON.parse(loaded) as CorsProxyConfig;
+  const parsed = (loaded == null ? {} : JSON.parse(loaded)) as CorsProxyConfig;
   if (!Array.isArray(parsed.fallbacks)) parsed.fallbacks = [];
-  return parsed;
+  const next = { ...defaultConfig, ...parsed };
+  const runtimeApiKey = getRuntimeApiKey();
+  if (runtimeApiKey) next.apiKey = runtimeApiKey;
+  if (!next.edgeUrl) delete next.apiKey;
+  if (next.edgeUrl !== defaultEdgeUrl && parsed.apiKey == null && runtimeApiKey == null) delete next.apiKey;
+  return next;
 }
 
 export function buildProxiedUrls(config: CorsProxyConfig, target: string): string[] {

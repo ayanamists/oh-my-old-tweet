@@ -85,12 +85,12 @@ function SettingsPanel() {
   };
 
   return (
-    <div className="flex flex-col gap-6 overflow-y-auto pt-2">
+    <div className="flex min-w-0 flex-col gap-6 overflow-y-auto pt-2">
       <Tabs defaultValue="general">
-        <TabsList className="w-full">
-          <TabsTrigger value="general"  className="flex-1">General</TabsTrigger>
-          <TabsTrigger value="proxy"    className="flex-1">Proxy</TabsTrigger>
-          <TabsTrigger value="edge"     className="flex-1">Edge</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="general"  className="min-w-0 px-2 text-xs sm:text-sm">General</TabsTrigger>
+          <TabsTrigger value="proxy"    className="min-w-0 px-2 text-xs sm:text-sm">Proxy</TabsTrigger>
+          <TabsTrigger value="edge"     className="min-w-0 px-2 text-xs sm:text-sm">Edge</TabsTrigger>
         </TabsList>
 
         {/* ── General ── */}
@@ -98,7 +98,7 @@ function SettingsPanel() {
           <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Content</h3>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <Label htmlFor="incl-reply">Include Replies</Label>
               <Checkbox
                 id="incl-reply"
@@ -110,7 +110,7 @@ function SettingsPanel() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <Label htmlFor="incl-post">Include Posts</Label>
               <Checkbox
                 id="incl-post"
@@ -122,7 +122,7 @@ function SettingsPanel() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <Label htmlFor="img-only">Images Only</Label>
               <Switch
                 id="img-only"
@@ -245,19 +245,20 @@ function SettingsPanel() {
             {cfg.mode === 3 && (
               <div className="space-y-2">
                 <Label htmlFor="proxy-url">Proxy URL prefix</Label>
-                <div className="flex gap-2">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                   <Input
                     id="proxy-url"
+                    className="min-w-0"
                     value={prefix}
                     onChange={e => setPrefix(e.target.value)}
                     placeholder="https://my-proxy.example.com/?target="
                   />
-                  <Button size="sm" onClick={() => save({ prefix })}>Save</Button>
+                  <Button size="sm" className="w-full sm:w-auto" onClick={() => save({ prefix })}>Save</Button>
                 </div>
               </div>
             )}
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <Label htmlFor="url-encoding">URL Encoding</Label>
               <Switch
                 id="url-encoding"
@@ -278,28 +279,30 @@ function SettingsPanel() {
 
             <div className="space-y-2">
               <Label htmlFor="edge-url">Worker URL</Label>
-              <div className="flex gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                 <Input
                   id="edge-url"
+                  className="min-w-0"
                   value={edgeUrl}
                   onChange={e => setEdgeUrl(e.target.value)}
                   placeholder="https://omot-edge.yourname.workers.dev"
                 />
-                <Button size="sm" onClick={() => save({ edgeUrl: edgeUrl || undefined })}>Save</Button>
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => save({ edgeUrl: edgeUrl || undefined })}>Save</Button>
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="api-key">API Key</Label>
-              <div className="flex gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                 <Input
                   id="api-key"
+                  className="min-w-0"
                   type="password"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
                   placeholder="Leave blank if no key is set"
                 />
-                <Button size="sm" onClick={() => save({ apiKey: apiKey || undefined })}>Save</Button>
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => save({ apiKey: apiKey || undefined })}>Save</Button>
               </div>
             </div>
           </section>
@@ -321,84 +324,98 @@ function AppBar() {
     if (user) navigate(`/${user}`);
   };
 
+  const renderActions = () => (
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Search archive"
+              onClick={() => navigate('/search')}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {config?.edgeUrl ? 'Search archive' : 'Search (requires Edge Worker)'}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Button variant="ghost" size="icon" aria-label="GitHub" asChild>
+        <a href="https://github.com/ayanamists/oh-my-old-tweet" target="_blank" rel="noreferrer">
+          <GithubIcon className="h-4 w-4" />
+        </a>
+      </Button>
+
+      <Button variant="ghost" size="icon" aria-label="Help / CORS Proxy docs" asChild>
+        <a href="https://github.com/ayanamists/oh-my-old-tweet/wiki/About_CORS_Proxy" target="_blank" rel="noreferrer">
+          <HelpCircle className="h-4 w-4" />
+        </a>
+      </Button>
+
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Settings">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-full max-w-full overflow-y-auto p-4 sm:w-96 sm:max-w-sm sm:p-6">
+          <SheetHeader className="mb-4 pr-8 text-left">
+            <SheetTitle>Settings</SheetTitle>
+          </SheetHeader>
+          <SettingsPanel />
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center gap-3 px-4 max-w-5xl mx-auto">
+      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-2 md:h-14 md:flex-row md:items-center md:gap-3 md:px-4 md:py-0">
 
         {/* Logo */}
-        <button
-          onClick={() => navigate('/')}
-          className="font-bold text-base tracking-tight text-foreground hover:text-primary transition-colors shrink-0"
-        >
-          OMOT
-        </button>
+        <div className="flex h-10 w-full items-center gap-2 md:h-auto md:w-auto md:shrink-0">
+          <button
+            onClick={() => navigate('/')}
+            className="shrink-0 text-base font-bold tracking-tight text-foreground transition-colors hover:text-primary"
+          >
+            OMOT
+          </button>
 
-        <Separator orientation="vertical" className="h-5" />
+          <Separator orientation="vertical" className="hidden h-5 md:block" />
+
+          <div className="ml-auto flex shrink-0 items-center gap-1 md:hidden">
+            {renderActions()}
+          </div>
+        </div>
 
         {/* Username input */}
-        <div className="flex items-center gap-1 flex-1 max-w-xs">
-          <span className="text-muted-foreground text-sm select-none">@</span>
-          <Input
-            className="h-8 text-sm"
-            placeholder="username"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          />
-          <Button size="sm" className="h-8 px-3 shrink-0" onClick={handleSearch}>
+        <div className="flex w-full min-w-0 items-center gap-2 md:max-w-sm md:flex-1">
+          <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <span className="flex h-9 shrink-0 items-center border-r border-input bg-muted px-2.5 text-sm text-muted-foreground select-none md:h-8">
+              @
+            </span>
+            <Input
+              className="h-9 min-w-0 flex-1 border-0 px-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:h-8"
+              placeholder="username"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            />
+          </div>
+          <Button size="sm" className="h-9 px-3 md:h-8" onClick={handleSearch}>
             Go
           </Button>
         </div>
 
-        <div className="flex-1" />
+        <div className="hidden md:block md:flex-1" />
 
-        {/* Search */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Search archive"
-                onClick={() => navigate('/search')}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {config?.edgeUrl ? 'Search archive' : 'Search (requires Edge Worker)'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* GitHub */}
-        <Button variant="ghost" size="icon" aria-label="GitHub" asChild>
-          <a href="https://github.com/ayanamists/oh-my-old-tweet" target="_blank" rel="noreferrer">
-            <GithubIcon className="h-4 w-4" />
-          </a>
-        </Button>
-
-        {/* Help */}
-        <Button variant="ghost" size="icon" aria-label="Help / CORS Proxy docs" asChild>
-          <a href="https://github.com/ayanamists/oh-my-old-tweet/wiki/About_CORS_Proxy" target="_blank" rel="noreferrer">
-            <HelpCircle className="h-4 w-4" />
-          </a>
-        </Button>
-
-        {/* Settings */}
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Settings">
-              <Settings className="h-4 w-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-80 sm:w-96 overflow-y-auto">
-            <SheetHeader className="mb-4">
-              <SheetTitle>Settings</SheetTitle>
-            </SheetHeader>
-            <SettingsPanel />
-          </SheetContent>
-        </Sheet>
+        <div className="hidden shrink-0 items-center gap-1 md:flex">
+          {renderActions()}
+        </div>
 
       </div>
     </header>
@@ -411,9 +428,9 @@ type MainLayoutProps = { children: React.ReactNode };
 
 function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className={cn('min-h-screen bg-background text-foreground')}>
+    <div className={cn('flex min-h-svh flex-col bg-background text-foreground md:min-h-screen')}>
       <AppBar />
-      <main className="min-h-[calc(100vh-3.5rem)]">
+      <main className="min-w-0 flex-1">
         {children}
       </main>
       <Toaster position="bottom-right" richColors />

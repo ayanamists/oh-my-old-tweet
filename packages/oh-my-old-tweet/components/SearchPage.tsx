@@ -20,6 +20,11 @@ interface SearchResult {
   text_snippet: string;
 }
 
+export function getSearchResultTimelinePath(result: Pick<SearchResult, 'id' | 'username'>): string {
+  const params = new URLSearchParams({ focus: result.id });
+  return `/${encodeURIComponent(result.username)}?${params.toString()}`;
+}
+
 async function fetchSearch(edgeUrl: string, q: string, user: string, apiKey?: string): Promise<{ results?: SearchResult[]; error?: string }> {
   const url = new URL(`${edgeUrl.replace(/\/$/, '')}/search`);
   if (q)    url.searchParams.set('q', q);
@@ -72,7 +77,7 @@ function ResultsList({ results, searched }: { results: SearchResult[]; searched:
             <button
               key={`${r.id}-${i}`}
               className="w-full min-w-0 px-4 py-3 text-left transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-              onClick={() => navigate(`/${r.username}`)}
+              onClick={() => navigate(getSearchResultTimelinePath(r))}
             >
               <p className="line-clamp-2 break-words text-sm">{snippet}</p>
               <p className="mt-1 break-words text-xs text-muted-foreground">@{r.username} · {date}</p>

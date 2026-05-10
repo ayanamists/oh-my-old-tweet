@@ -1,6 +1,6 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { CdxItem, User } from "twitter-data-parser";
-import { getCdxList } from "./Data";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { CdxItem, Post, User } from "twitter-data-parser";
+import { getCdxList, MinimalCdxInfo } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import { SkeletonList } from "./SkeletonCard";
 import { ConfigContext } from "./context/ConfigContext";
@@ -8,10 +8,76 @@ import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { FilterContext } from "./context/FilterContext";
 import { DateTime } from "luxon";
-import { ChevronLeft, ChevronRight, MapPin, Link as LinkIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronUp, MapPin, Link as LinkIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
+
+const PAGE_SIZE = 30;
+const MAX_VISIBLE_ITEMS = 120;
+
+interface VisibleRange {
+  start: number;
+  end: number;
+}
+
+function getInitialRange(total: number, focusIndex: number | undefined): VisibleRange {
+  if (total === 0) return { start: 0, end: 0 };
+  if (focusIndex == null || focusIndex < 0) {
+    return { start: 0, end: Math.min(total, PAGE_SIZE) };
+  }
+
+  const halfPage = Math.floor(PAGE_SIZE / 2);
+  const unclampedStart = focusIndex - halfPage;
+  const maxStart = Math.max(0, total - PAGE_SIZE);
+  const start = Math.min(Math.max(0, unclampedStart), maxStart);
+  return { start, end: Math.min(total, start + PAGE_SIZE) };
+}
+
+function appendPage(range: VisibleRange, total: number): VisibleRange {
+  if (range.end >= total) return range;
+  const end = Math.min(total, range.end + PAGE_SIZE);
+  return {
+    start: end - range.start > MAX_VISIBLE_ITEMS ? end - MAX_VISIBLE_ITEMS : range.start,
+    end,
+  };
+}
+
+function prependPage(range: VisibleRange): VisibleRange {
+  if (range.start <= 0) return range;
+  const start = Math.max(0, range.start - PAGE_SIZE);
+  return { start, end: Math.min(range.end, start + MAX_VISIBLE_ITEMS) };
+}
+
+function TimelineCdxItem({
+  user,
+  item,
+  focused,
+  onProfileLoaded,
+}: {
+  user: string;
+  item: CdxItem;
+  focused: boolean;
+  onProfileLoaded: (post: Post) => void;
+}) {
+  const cdxItem = useMemo<MinimalCdxInfo>(() => ({
+    ...item,
+    origUrl: item.original,
+  }), [item]);
+
+  return (
+    <div
+      data-focus-tweet={focused ? 'true' : undefined}
+      className={focused ? 'scroll-mt-24 rounded-lg ring-2 ring-primary/50 ring-offset-4 ring-offset-background' : undefined}
+    >
+      <LoadableTCard
+        user={user}
+        cdxItem={cdxItem}
+        onProfileLoaded={onProfileLoaded}
+      />
+    </div>
+  );
+}
 
 // ─── Error fallback ───────────────────────────────────────────────────────────
 
@@ -124,60 +190,57 @@ function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNex
 
 // ─── Timeline1 ────────────────────────────────────────────────────────────────
 
-function Timeline1({ user }: { user: string }) {
-  const [lst, setLst]       = useState<JSX.Element[]>([]);
+function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
   const cdxList             = useRef<CdxItem[] | null>(null);
-  const [hasMore, setHasMore] = useState(true);
+  const [visibleRange, setVisibleRange] = useState<VisibleRange>({ start: 0, end: 0 });
+  const [totalCount, setTotalCount] = useState(0);
   const { config }          = useContext(ConfigContext);
   const [cdxLoading, setCdxLoading] = useState(true);
   const { showBoundary }    = useErrorBoundary();
-  const page                = useRef(0);
-  const pageSize            = 30;
   const containerRef        = useRef<HTMLDivElement | null>(null);
+  const focusScrollPending  = useRef(false);
 
   const [profiles, setProfiles]             = useState<User[]>([]);
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [profileDate, setProfileDate]       = useState('');
 
-  const updateLst = useCallback((cdxData: CdxItem[], init: boolean) => {
-    const l = cdxData.map(i =>
-      <LoadableTCard
-        user={user}
-        cdxItem={{ ...i, origUrl: i.original }}
-        key={i.id}
-        onProfileLoaded={post => {
-          if (post.user?.profileInfo) {
-            setProfiles(prev => {
-              const exists = prev.some(
-                p => p.userName === post.user.userName && p.profileInfo?.text === post.user.profileInfo?.text
-              );
-              return exists ? prev : [...prev, post.user];
-            });
-          }
-        }}
-      />
-    );
-    setLst(lst => init ? l : lst.concat(l));
-  }, [user]);
+  const loadNextPage = useCallback(() => {
+    setVisibleRange(range => appendPage(range, totalCount));
+  }, [totalCount]);
 
-  const fetchData = useCallback((init: boolean) => {
-    if (init) page.current = 0;
-    if (!cdxList.current) return;
-    const pageNow = page.current;
-    if (pageNow * pageSize >= cdxList.current.length) {
-      setHasMore(false);
-    } else {
-      const nextData = cdxList.current.slice(pageNow * pageSize, (pageNow + 1) * pageSize);
-      page.current += 1;
-      updateLst(nextData, init);
+  const loadPreviousPage = useCallback(() => {
+    setVisibleRange(prependPage);
+  }, []);
+
+  const handleProfileLoaded = useCallback((post: Post) => {
+    if (post.user?.profileInfo) {
+      setProfiles(prev => {
+        const exists = prev.some(
+          p => p.userName === post.user.userName && p.profileInfo?.text === post.user.profileInfo?.text
+        );
+        return exists ? prev : [...prev, post.user];
+      });
     }
-  }, [updateLst]);
+  }, []);
+
+  const renderCdxItem = useCallback((i: CdxItem) => (
+    <TimelineCdxItem
+      key={i.id}
+      user={user}
+      item={i}
+      focused={focusId === i.id}
+      onProfileLoaded={handleProfileLoaded}
+    />
+  ), [focusId, handleProfileLoaded, user]);
 
   const { tweetFilter } = useContext(FilterContext);
   const { dateInRange, sortOrder } = tweetFilter;
 
   useEffect(() => {
     setCdxLoading(true);
+    cdxList.current = null;
+    setVisibleRange({ start: 0, end: 0 });
+    setTotalCount(0);
     // Drop the previous user's accumulated profile snapshots before fetching.
     // Otherwise switching A -> B leaves A's avatar/bio in the sidebar until
     // (and even after) B's posts append their own profile.
@@ -188,11 +251,15 @@ function Timeline1({ user }: { user: string }) {
       const filtered = data
         .filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)))
         .sort((a, b) => a.date.getTime() - b.date.getTime());
-      cdxList.current = sortOrder === 'desc' ? filtered.reverse() : filtered;
-      fetchData(true);
+      const ordered = sortOrder === 'desc' ? filtered.reverse() : filtered;
+      const focusIndex = focusId ? ordered.findIndex(i => i.id === focusId) : -1;
+      cdxList.current = ordered;
+      setTotalCount(ordered.length);
+      setVisibleRange(getInitialRange(ordered.length, focusIndex >= 0 ? focusIndex : undefined));
+      focusScrollPending.current = focusIndex >= 0;
       setCdxLoading(false);
     }).catch(showBoundary);
-  }, [config, user, showBoundary, dateInRange, sortOrder, fetchData]);
+  }, [config, user, showBoundary, dateInRange, sortOrder, focusId]);
 
   useEffect(() => {
     if (profiles.length > 0) {
@@ -209,7 +276,8 @@ function Timeline1({ user }: { user: string }) {
   // never advances. Watch the container and pull the next page when it fits
   // entirely within the viewport.
   useEffect(() => {
-    if (!hasMore || cdxLoading) return;
+    const hasNext = visibleRange.end < totalCount;
+    if (!hasNext || cdxLoading) return;
     const node = containerRef.current;
     if (!node) return;
 
@@ -217,7 +285,7 @@ function Timeline1({ user }: { user: string }) {
     const check = () => {
       if (cancelled) return;
       const rect = node.getBoundingClientRect();
-      if (rect.bottom <= window.innerHeight) fetchData(false);
+      if (rect.bottom <= window.innerHeight) loadNextPage();
     };
 
     const raf = requestAnimationFrame(check);
@@ -229,30 +297,70 @@ function Timeline1({ user }: { user: string }) {
       cancelAnimationFrame(raf);
       ro?.disconnect();
     };
-  }, [lst.length, hasMore, cdxLoading, fetchData]);
+  }, [visibleRange.start, visibleRange.end, totalCount, cdxLoading, loadNextPage]);
+
+  useEffect(() => {
+    if (cdxLoading || !focusScrollPending.current) return;
+
+    const raf = requestAnimationFrame(() => {
+      const focusEl = document.querySelector('[data-focus-tweet="true"]');
+      if (focusEl instanceof HTMLElement && typeof focusEl.scrollIntoView === 'function') {
+        focusEl.scrollIntoView({ block: 'center' });
+      }
+      focusScrollPending.current = false;
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [cdxLoading, visibleRange.start, visibleRange.end, focusId]);
 
   const currentProfile = profiles.length > 0 ? profiles[currentProfileIndex] : null;
 
   function tweetListContent() {
+    const items = cdxList.current?.slice(visibleRange.start, visibleRange.end) ?? [];
+    const hasPrevious = visibleRange.start > 0;
+    const hasNext = visibleRange.end < totalCount;
+    const previousLabel = sortOrder === 'desc' ? 'Load newer tweets' : 'Load older tweets';
+
     if (cdxLoading) return <SkeletonList count={8} />;
-    if (lst.length === 0) return (
+    if (totalCount === 0) return (
       <div className="py-16 text-center space-y-2">
         <p className="text-muted-foreground">No archived tweets found for <strong>@{user}</strong>.</p>
         <p className="text-sm text-muted-foreground">Try adjusting the date range or content filters.</p>
       </div>
     );
     return (
-      <InfiniteScroll
-        dataLength={lst.length}
-        next={() => fetchData(false)}
-        hasMore={hasMore}
-        loader={<SkeletonList count={3} />}
-        endMessage={
-          <p className="text-center text-xs text-muted-foreground py-6">All archived tweets loaded.</p>
-        }
-      >
-        {lst}
-      </InfiniteScroll>
+      <>
+        <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>
+            Showing {visibleRange.start + 1}-{visibleRange.end} of {totalCount}
+          </span>
+          {focusId && <Badge variant="secondary">Search result</Badge>}
+        </div>
+
+        {hasPrevious && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mb-3 w-full gap-2"
+            onClick={loadPreviousPage}
+          >
+            <ChevronUp className="h-4 w-4" />
+            {previousLabel}
+          </Button>
+        )}
+
+        <InfiniteScroll
+          dataLength={visibleRange.end}
+          next={loadNextPage}
+          hasMore={hasNext}
+          loader={<SkeletonList count={3} />}
+          endMessage={
+            <p className="text-center text-xs text-muted-foreground py-6">All archived tweets loaded in this direction.</p>
+          }
+        >
+          {items.map(renderCdxItem)}
+        </InfiniteScroll>
+      </>
     );
   }
 
@@ -290,10 +398,10 @@ function Timeline1({ user }: { user: string }) {
   );
 }
 
-export function Timeline({ user }: { user: string }) {
+export function Timeline({ user, focusId }: { user: string; focusId?: string }) {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <Timeline1 user={user} />
+      <Timeline1 user={user} focusId={focusId} />
     </ErrorBoundary>
   );
 }

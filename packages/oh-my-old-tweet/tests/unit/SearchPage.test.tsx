@@ -27,6 +27,13 @@ function ConfigWrapper({ config, children }: { config: CorsProxyConfig; children
 }
 
 describe('SearchPage edge-URL guard', () => {
+  it('builds a timeline URL focused on the selected search result', async () => {
+    const { getSearchResultTimelinePath } = await import('../../components/SearchPage');
+
+    expect(getSearchResultTimelinePath({ username: 'Mark_Leica', id: '1447772896802209794' }))
+      .toBe('/Mark_Leica?focus=1447772896802209794');
+  });
+
   it('shows "not configured" alert when edgeUrl is absent', async () => {
     const { default: SearchPage } = await import('../../components/SearchPage');
     render(

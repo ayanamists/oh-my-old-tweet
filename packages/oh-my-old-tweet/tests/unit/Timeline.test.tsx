@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, cleanup, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, cleanup, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DateTime, Interval } from 'luxon';
 import type { Post } from 'twitter-data-parser';
@@ -245,6 +245,25 @@ describe('Timeline — subtle filter/scroll behaviour', () => {
       'foo:mid',
       'foo:old',
     ]);
+  });
+
+  it('opens a focused search result inside a bounded timeline window', async () => {
+    const items = Array.from({ length: 100 }, (_, i) => makeCdxItem(String(i), '2020-06-01'));
+    items.forEach(it => mockPostMap.set(it.id, makePost(it.id)));
+    mockCdxList.fn.mockResolvedValue(items);
+
+    const { Timeline } = await import('../../src/Timeline');
+
+    render(<Wrap filter={baseFilter}><Timeline user="foo" focusId="50" /></Wrap>);
+
+    await waitFor(() => expect(screen.queryByText('foo:50')).not.toBeNull());
+    expect(screen.queryByText('foo:0')).toBeNull();
+    expect(screen.getByText(/showing/i).textContent).toContain('of 100');
+
+    const previousButton = screen.getByRole('button', { name: /load older tweets/i });
+    fireEvent.click(previousButton);
+
+    await waitFor(() => expect(screen.queryByText('foo:20')).not.toBeNull());
   });
 
   it('passes the internal @ user link preference to tweet cards', async () => {

@@ -2,6 +2,15 @@
 
 import React, { useEffect } from 'react';
 
+type LinkOptions = {
+  usernameLinkHref?: (username: string) => string;
+  usernameLinkTarget?: string;
+};
+
+function escapeAttribute(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
 function getGroups(str: string, regex: RegExp, index: number) {
   let m;
   const results = [];
@@ -46,13 +55,17 @@ function replaceLinks(str: string) {
   return finalStr;
 }
 
-function replaceUsernames(str: string) {
+function replaceUsernames(str: string, options: LinkOptions = {}) {
   let finalStr = str;
   const usernames = findUsernames(str);
   usernames.forEach((username) => {
+    const href = options.usernameLinkHref?.(username) ?? `https://twitter.com/${username}`;
+    const target = options.usernameLinkTarget ?? (options.usernameLinkHref ? undefined : '_blank');
+    const targetAttr = target ? ` target="${escapeAttribute(target)}"` : '';
+    const relAttr = target === '_blank' ? ' rel="noreferrer"' : '';
     finalStr = finalStr.replace(
       `@${username}`,
-      `<a target="_blank" class="react-tweet-card--username-in-tweet" href="https://twitter.com/${username}">@${username}</a>`,
+      `<a${targetAttr}${relAttr} class="react-tweet-card--username-in-tweet" href="${escapeAttribute(href)}">@${username}</a>`,
     );
   });
   return finalStr;
@@ -70,16 +83,20 @@ function replaceHashtags(str: string) {
   return finalStr;
 }
 
-function replaceLinksUsernamesHashtags(el: HTMLElement) {
-  el.innerHTML = replaceHashtags(replaceUsernames(replaceLinks(el.textContent || '')));
+function replaceLinksUsernamesHashtags(el: HTMLElement, options: LinkOptions = {}) {
+  el.innerHTML = replaceHashtags(replaceUsernames(replaceLinks(el.textContent || ''), options));
 }
 
-const useLinksUsernamesHashtags = (ref: React.RefObject<HTMLElement>, text: string) => {
+const useLinksUsernamesHashtags = (
+  ref: React.RefObject<HTMLElement>,
+  text: string,
+  options: LinkOptions = {},
+) => {
   useEffect(() => {
     if (ref?.current) {
-      replaceLinksUsernamesHashtags(ref.current);
+      replaceLinksUsernamesHashtags(ref.current, options);
     }
-  }, [ref, text]);
+  }, [ref, text, options.usernameLinkHref, options.usernameLinkTarget]);
 };
 
 export default useLinksUsernamesHashtags;

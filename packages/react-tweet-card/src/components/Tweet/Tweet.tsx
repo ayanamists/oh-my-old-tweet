@@ -5,11 +5,11 @@ import useLinksUsernamesHashtags from 'hooks/useLinksUsernamesHashtags';
 import { TweetCardProps } from 'index';
 import css from './Tweet.module.css';
 
-type TweetProps = Pick<TweetCardProps, 'tweet'>;
+type TweetProps = Pick<TweetCardProps, 'tweet' | 'usernameLinkHref' | 'usernameLinkTarget'>;
 
-const Tweet = ({ tweet }: TweetProps) => {
+const Tweet = ({ tweet, usernameLinkHref, usernameLinkTarget }: TweetProps) => {
   const ref = useRef(null);
-  useLinksUsernamesHashtags(ref, tweet);
+  useLinksUsernamesHashtags(ref, tweet, { usernameLinkHref, usernameLinkTarget });
 
   return (
     <p

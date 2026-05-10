@@ -132,6 +132,35 @@ function SettingsPanel() {
                 }
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timeline-order">Order</Label>
+              <Select
+                value={tweetFilter.sortOrder}
+                onValueChange={v =>
+                  setTweetFilter({ ...tweetFilter, sortOrder: v === 'desc' ? 'desc' : 'asc' })
+                }
+              >
+                <SelectTrigger id="timeline-order">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Oldest first</SelectItem>
+                  <SelectItem value="desc">Newest first</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="internal-user-links">Open @ users in OMOT</Label>
+              <Switch
+                id="internal-user-links"
+                checked={tweetFilter.linkUsersInternally}
+                onCheckedChange={v =>
+                  setTweetFilter({ ...tweetFilter, linkUsersInternally: v })
+                }
+              />
+            </div>
           </section>
 
           <Separator />

@@ -39,6 +39,9 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
   archiveLink?: string;
   shareLink?: string;
   clickableProfileLink?: boolean;
+  profileLinkHref?: string;
+  usernameLinkHref?: (username: string) => string;
+  usernameLinkTarget?: string;
   theme: ThemeOption
   colors?: TweetCardColors;
   gradientBackground?: boolean;
@@ -57,6 +60,9 @@ function TweetCard({
   permalink,
   engagement,
   clickableProfileLink,
+  profileLinkHref,
+  usernameLinkHref,
+  usernameLinkTarget,
   showDetails = true,
   showEngagement = true,
   emojis,
@@ -69,13 +75,13 @@ function TweetCard({
   return (
     <Container {...{ ...rest, theme }}>
       <div className="react-tweet-card--header">
-        <UserDetails {...{ ...author, clickableProfileLink }} />
+        <UserDetails {...{ ...author, clickableProfileLink, profileLinkHref }} />
         <div className="react-tweet-card--icons">
           <TwitterLogo {...{ permalink }} />
           {archiveLink && <ArchiveLogo {...{ ...rest, archiveLink, theme }} />}
         </div>
       </div>
-      <Tweet {...{ tweet }} />
+      <Tweet {...{ tweet, usernameLinkHref, usernameLinkTarget }} />
       {tweetImages?.length && <TweetImages {...{ tweetImages }} />}
       <div className="react-tweet-card--footer">
         {showDetails && <Details {...{ time, source, permalink }} />}

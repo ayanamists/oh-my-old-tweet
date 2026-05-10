@@ -60,7 +60,11 @@ export function LoadableTCard({ user, cdxItem, onProfileLoaded }: {
 
   return (
     <div className="my-3">
-      <TCard p={post} shareLink={getShareLink(user, cdxItem)} />
+      <TCard
+        p={post}
+        shareLink={getShareLink(user, cdxItem)}
+        linkUsersInternally={tweetFilter.linkUsersInternally}
+      />
     </div>
   );
 }

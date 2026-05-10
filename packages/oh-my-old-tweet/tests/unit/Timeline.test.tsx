@@ -43,8 +43,8 @@ vi.mock('../../src/useCachedFetch', async () => {
 
 // TCard pulls in react-tweet-card. Stub it out to a marker.
 vi.mock('../../src/TCard', () => ({
-  TCard: ({ p }: { p: Post }) => (
-    <div data-testid="tcard">{p.user.userName}:{p.id}</div>
+  TCard: ({ p, linkUsersInternally }: { p: Post; linkUsersInternally?: boolean }) => (
+    <div data-testid="tcard" data-internal-links={String(linkUsersInternally)}>{p.user.userName}:{p.id}</div>
   ),
 }));
 
@@ -92,6 +92,8 @@ const baseFilter: TweetFilter = {
   contentBelongTo: ['post', 'reply'],
   mustContainImage: false,
   dateInRange: Interval.fromDateTimes(DateTime.fromISO('2006-01-01'), DateTime.now()),
+  sortOrder: 'asc',
+  linkUsersInternally: true,
 };
 
 function Wrap({ filter, children }: { filter: TweetFilter; children: React.ReactNode }) {
@@ -217,5 +219,48 @@ describe('Timeline — subtle filter/scroll behaviour', () => {
       expect(screen.queryAllByTestId('tcard')).toHaveLength(1);
       expect(screen.queryByText('Mixed case profile')).not.toBeNull();
     });
+  });
+
+  it('can reverse timeline order by archive capture date', async () => {
+    const items = [
+      makeCdxItem('old', '2020-01-01'),
+      makeCdxItem('new', '2020-03-01'),
+      makeCdxItem('mid', '2020-02-01'),
+    ];
+    items.forEach(it => mockPostMap.set(it.id, makePost(it.id)));
+    mockCdxList.fn.mockResolvedValue(items);
+
+    const { Timeline } = await import('../../src/Timeline');
+
+    render(
+      <Wrap filter={{ ...baseFilter, sortOrder: 'desc' }}>
+        <Timeline user="foo" />
+      </Wrap>,
+    );
+
+    await waitFor(() => expect(screen.queryAllByTestId('tcard')).toHaveLength(3));
+
+    expect(screen.queryAllByTestId('tcard').map(el => el.textContent)).toEqual([
+      'foo:new',
+      'foo:mid',
+      'foo:old',
+    ]);
+  });
+
+  it('passes the internal @ user link preference to tweet cards', async () => {
+    const items = [makeCdxItem('p1', '2020-01-01')];
+    mockPostMap.set('p1', makePost('p1'));
+    mockCdxList.fn.mockResolvedValue(items);
+
+    const { Timeline } = await import('../../src/Timeline');
+
+    render(
+      <Wrap filter={{ ...baseFilter, linkUsersInternally: false }}>
+        <Timeline user="foo" />
+      </Wrap>,
+    );
+
+    await waitFor(() => expect(screen.queryAllByTestId('tcard')).toHaveLength(1));
+    expect(screen.getByTestId('tcard').getAttribute('data-internal-links')).toBe('false');
   });
 });

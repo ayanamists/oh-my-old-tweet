@@ -173,7 +173,8 @@ function Timeline1({ user }: { user: string }) {
     }
   }, [updateLst]);
 
-  const { tweetFilter: { dateInRange } } = useContext(FilterContext);
+  const { tweetFilter } = useContext(FilterContext);
+  const { dateInRange, sortOrder } = tweetFilter;
 
   useEffect(() => {
     setCdxLoading(true);
@@ -184,11 +185,14 @@ function Timeline1({ user }: { user: string }) {
     setCurrentProfileIndex(0);
     setProfileDate('');
     getCdxList(config!, user, dateInRange).then(data => {
-      cdxList.current = data.filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)));
+      const filtered = data
+        .filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)))
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
+      cdxList.current = sortOrder === 'desc' ? filtered.reverse() : filtered;
       fetchData(true);
       setCdxLoading(false);
     }).catch(showBoundary);
-  }, [config, user, showBoundary, dateInRange]);
+  }, [config, user, showBoundary, dateInRange, sortOrder, fetchData]);
 
   useEffect(() => {
     if (profiles.length > 0) {

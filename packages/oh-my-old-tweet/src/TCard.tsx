@@ -4,22 +4,31 @@ import { Post } from "twitter-data-parser";
 interface TCardProps {
   p: Post;
   shareLink: string;
+  linkUsersInternally?: boolean;
 }
 
-export function TCard({ p, shareLink }: TCardProps) {
+function getInternalUserHref(username: string) {
+  return `#/${encodeURIComponent(username)}`;
+}
+
+export function TCard({ p, shareLink, linkUsersInternally = true }: TCardProps) {
   const name    = p.user.fullName ?? "";
+  const username = p.user.userName ?? "";
   const text    = p.text ?? "";
   const theme   = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   const textAll = p.replyInfo != null
     ? `Replying to @${p.replyInfo.targetUser.userName ?? ""}:\n${text}`
     : text;
+  const profileLinkHref = linkUsersInternally && username
+    ? getInternalUserHref(username)
+    : undefined;
 
   return (
     <TweetCard
       className="omot-tweet-card"
       author={{
         name,
-        username: p.user.userName ?? "",
+        username,
         image: p.user.avatar ?? "",
       }}
       tweet={textAll}
@@ -30,6 +39,9 @@ export function TCard({ p, shareLink }: TCardProps) {
       permalink={p.tweetUrl}
       archiveLink={p.archiveUrl}
       shareLink={shareLink}
+      clickableProfileLink={Boolean(profileLinkHref)}
+      profileLinkHref={profileLinkHref}
+      usernameLinkHref={linkUsersInternally ? getInternalUserHref : undefined}
     />
   );
 }

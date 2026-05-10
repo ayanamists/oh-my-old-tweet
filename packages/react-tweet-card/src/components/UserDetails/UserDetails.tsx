@@ -6,7 +6,7 @@ import Username from '../Username';
 import css from './UserDetails.module.css';
 
 type UserDetailsProps = TweetCardProps['author'] &
-  Pick<TweetCardProps, 'clickableProfileLink'>;
+  Pick<TweetCardProps, 'clickableProfileLink' | 'profileLinkHref'>;
 
 const UserDetails = ({
   name,
@@ -17,15 +17,20 @@ const UserDetails = ({
   isBusiness,
   isProtected,
   clickableProfileLink,
+  profileLinkHref,
 }: UserDetailsProps) => {
   const Tag = clickableProfileLink ? 'a' : 'div';
+  const href = profileLinkHref ?? `https://twitter.com/${username}`;
+  const opensExternally = /^https?:\/\//.test(href);
 
   return (
     <Tag
       {...(clickableProfileLink && {
-        href: `https://twitter.com/${username}`,
-        target: '_blank',
-        rel: 'noreferrer',
+        href,
+        ...(opensExternally && {
+          target: '_blank',
+          rel: 'noreferrer',
+        }),
       })}
       className={css.userDetails}
       aria-label={[
@@ -33,7 +38,7 @@ const UserDetails = ({
         isVerified && 'This twitter account is verified',
         isProtected && "This twitter account's tweets are protected",
         clickableProfileLink &&
-          'Click this link to open their profile on twitter.com',
+          'Click this link to open their profile',
       ]
         .filter(Boolean)
         .join('. ')}

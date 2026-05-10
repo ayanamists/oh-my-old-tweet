@@ -85,4 +85,27 @@ describe('getCdxList — edge /cdx routing', () => {
     const calledUrls = fetchMock.mock.calls.map((c: unknown[]) => c[0] as string);
     expect(calledUrls.every((u) => !u.includes('/cdx?user='))).toBe(true);
   });
+
+  // The edge worker now requests `fl=timestamp,original,mimetype,statuscode,digest`
+  // from archive.org (drops the slow `length` column), so its responses no
+  // longer carry urlkey/length. The frontend must consume that schema too.
+  it('parses fl-trimmed CDX responses returned by the edge worker', async () => {
+    const trimmedBody = JSON.stringify([
+      ['timestamp', 'original', 'mimetype', 'statuscode', 'digest'],
+      ['20060321205014', 'https://twitter.com/jack/status/20', 'text/html', '200', 'AAAA'],
+      ['20070101000000', 'https://twitter.com/jack/status/21', 'text/html', '200', 'BBBB'],
+    ]);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(trimmedBody, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const items = await getCdxList(configWithEdge, nextUser(), interval);
+
+    expect(items.map((i) => i.id).sort()).toEqual(['20', '21']);
+    // urlKey / length are absent in the trimmed schema; parseCdxRows must
+    // not invent values for them by reading the wrong column.
+    expect(items[0].urlKey).toBeUndefined();
+    expect(items[0].length).toBeUndefined();
+    expect(items[0].original).toBe('https://twitter.com/jack/status/20');
+    expect(items[0].mimetype).toBe('text/html');
+  });
 });

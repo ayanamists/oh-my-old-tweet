@@ -4,13 +4,20 @@ import type { Env } from '../src/types';
 
 afterEach(() => vi.restoreAllMocks());
 
+// v2 schema: archive.org responses are `fl=`-trimmed to the 5 columns we
+// consume. Tests use this format so they exercise the same JSON shape that
+// `fetchArchiveCdx` actually produces.
 const SAMPLE_CDX = JSON.stringify([
-  ['urlkey', 'timestamp', 'original', 'mimetype', 'statuscode', 'digest', 'length'],
-  ['com,twitter)/jack/status/20', '20060321205014', 'https://twitter.com/jack/status/20', 'text/html', '200', 'AAAA', '1234'],
+  ['timestamp', 'original', 'mimetype', 'statuscode', 'digest'],
+  ['20060321205014', 'https://twitter.com/jack/status/20', 'text/html', '200', 'AAAA'],
+]);
+const EMPTY_CDX = JSON.stringify([
+  ['timestamp', 'original', 'mimetype', 'statuscode', 'digest'],
 ]);
 
 const FRESH_MS = 24 * 60 * 60 * 1000;
 const STALE_MS = 14 * 24 * 60 * 60 * 1000;
+const EMPTY_STALE_MS = 30 * 60 * 1000;
 
 interface Stored {
   body: string;
@@ -74,7 +81,7 @@ describe('handleCdx', () => {
     const r2 = makeR2({
       [cdxCacheKey('jack')]: {
         body: SAMPLE_CDX,
-        customMetadata: { cachedAt: String(Date.now() - 1000) },
+        customMetadata: { cachedAt: String(Date.now() - 1000), rowCount: '1' },
       },
     });
     const fetchSpy = vi.fn();
@@ -96,10 +103,10 @@ describe('handleCdx', () => {
     const r2 = makeR2({
       [cdxCacheKey('jack')]: {
         body: SAMPLE_CDX,
-        customMetadata: { cachedAt: String(stale) },
+        customMetadata: { cachedAt: String(stale), rowCount: '1' },
       },
     });
-    const refreshed = '[["urlkey","timestamp","original","mimetype","statuscode","digest","length"],["fresh","20260101000000","x","text/html","200","B","1"]]';
+    const refreshed = '[["timestamp","original","mimetype","statuscode","digest"],["20260101000000","https://twitter.com/jack/status/21","text/html","200","B"]]';
     const fetchSpy = vi.fn().mockResolvedValue(new Response(refreshed, { status: 200 }));
     vi.stubGlobal('fetch', fetchSpy);
     const ctx = makeCtx();
@@ -122,7 +129,7 @@ describe('handleCdx', () => {
     const r2 = makeR2({
       [cdxCacheKey('jack')]: {
         body: SAMPLE_CDX,
-        customMetadata: { cachedAt: String(ancient) },
+        customMetadata: { cachedAt: String(ancient), rowCount: '1' },
       },
     });
     const fresh = '[["h"],["row"]]';
@@ -157,6 +164,9 @@ describe('handleCdx', () => {
     const upstreamUrl = fetchSpy.mock.calls[0][0] as string;
     expect(upstreamUrl).toContain('collapse=digest');
     expect(upstreamUrl).toContain('twitter.com%2Fjack%2Fstatus');
+    // `fl=` projection — without it, archive.org times out on prefix scans
+    // for active accounts. Must NOT include `length` (the slow column).
+    expect(upstreamUrl).toMatch(/[?&]fl=timestamp%2Coriginal%2Cmimetype%2Cstatuscode%2Cdigest(?:&|$)/);
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
     const stored = await env_get(r2, cdxCacheKey('jack'));
     expect(stored).toBe(fresh);
@@ -167,7 +177,7 @@ describe('handleCdx', () => {
     const r2 = makeR2({
       [cdxCacheKey('jack')]: {
         body: SAMPLE_CDX,
-        customMetadata: { cachedAt: String(ancient) },
+        customMetadata: { cachedAt: String(ancient), rowCount: '1' },
       },
     });
     const fetchSpy = vi.fn().mockRejectedValue(new Error('archive.org down'));
@@ -179,6 +189,56 @@ describe('handleCdx', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('X-Cache')).toBe('STALE');
     expect(await res.text()).toBe(SAMPLE_CDX);
+  });
+
+  it('falls back to an over-stale empty CDX cache when archive.org fails', async () => {
+    // Earlier behaviour returned 502 here on the theory that empty results
+    // shouldn't get pinned forever. EMPTY_FRESH_MS / EMPTY_STALE_MS already
+    // make negative caches expire fast (5/30 min vs 1/14 day for non-empty),
+    // so we can safely prefer STALE-empty over a hard 502 when upstream is
+    // flapping. archive.org returning 504 for genuinely-empty users is the
+    // motivating case — locking them out of any answer is worse than a
+    // delayed-by-30-min one.
+    const ancient = Date.now() - (EMPTY_STALE_MS + 60_000);
+    const r2 = makeR2({
+      [cdxCacheKey('jack')]: {
+        body: EMPTY_CDX,
+        customMetadata: { cachedAt: String(ancient), rowCount: '0' },
+      },
+    });
+    const fetchSpy = vi.fn().mockRejectedValue(new Error('archive.org down'));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const req = new Request('https://edge.example.com/cdx?user=jack');
+    const res = await handleCdx(req, makeEnv(r2), makeCtx());
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('X-Cache')).toBe('STALE');
+    expect(await res.text()).toBe(EMPTY_CDX);
+  });
+
+  it('keeps empty CDX cache fresh only briefly, then refreshes in the background', async () => {
+    const staleEmpty = Date.now() - (6 * 60 * 1000);
+    const r2 = makeR2({
+      [cdxCacheKey('jack')]: {
+        body: EMPTY_CDX,
+        customMetadata: { cachedAt: String(staleEmpty), rowCount: '0' },
+      },
+    });
+    const refreshed = SAMPLE_CDX;
+    const fetchSpy = vi.fn().mockResolvedValue(new Response(refreshed, { status: 200 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const ctx = makeCtx();
+
+    const req = new Request('https://edge.example.com/cdx?user=jack');
+    const res = await handleCdx(req, makeEnv(r2), ctx);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('X-Cache')).toBe('STALE');
+    expect(await res.text()).toBe(EMPTY_CDX);
+    await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(await env_get(r2, cdxCacheKey('jack'))).toBe(refreshed);
   });
 
   it('returns 502 on archive.org failure when nothing is cached', async () => {

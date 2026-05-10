@@ -1,5 +1,5 @@
 import { CorsProxyConfig, buildProxiedUrls, fetchWithFallbacks } from "./corsUrl";
-import { parsePost, Post, parseCdxItem, CdxItem, ArchiveTweetInfo } from "twitter-data-parser"
+import { parsePost, Post, parseCdxRows, CdxItem, ArchiveTweetInfo } from "twitter-data-parser"
 import { Interval } from "luxon";
 
 async function tryEdgeWorker(edgeUrl: string, archiveUrl: string, apiKey?: string): Promise<Post | undefined> {
@@ -29,7 +29,7 @@ async function tryEdgeCdx(edgeUrl: string, user: string, apiKey?: string): Promi
     if (!res.ok) return undefined;
     const rows = await res.json() as string[][];
     if (!Array.isArray(rows)) return undefined;
-    return rows.map(parseCdxItem);
+    return parseCdxRows(rows);
   } catch {
     return undefined;
   }
@@ -188,7 +188,7 @@ function fetchOneCdx(config: CorsProxyConfig, user: string, interval: Interval):
   url.searchParams.append('collapse', 'digest');
   return fetchWithFallbacks(buildProxiedUrls(config, url.toString()))
     .then(res => res.json())
-    .then((j: string[][]) => j.map(parseCdxItem));
+    .then((j: string[][]) => parseCdxRows(j));
 }
 
 export interface MinimalCdxInfo {

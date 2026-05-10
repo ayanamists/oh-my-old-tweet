@@ -13,11 +13,16 @@ const CORS_HEADERS = {
 // returning a result the user might mistake for fresh.
 const FRESH_MS = 24 * 60 * 60 * 1000;       // 1 day
 const STALE_MS = 14 * 24 * 60 * 60 * 1000;  // 14 days
+const EMPTY_FRESH_MS = 5 * 60 * 1000;        // 5 minutes
+const EMPTY_STALE_MS = 30 * 60 * 1000;       // 30 minutes
 
 const USERNAME_RE = /^[A-Za-z0-9_]{1,20}$/;
 
+// v2 schema: archive.org responses are now `fl=`-trimmed (5 columns instead
+// of 7). Bumping the cache prefix isolates the new format from any v1 blobs
+// still sitting in R2 from before the change.
 export function cdxCacheKey(user: string): string {
-  return `cdx/v1/${user.toLowerCase()}.json`;
+  return `cdx/v2/${user.toLowerCase()}.json`;
 }
 
 async function fetchArchiveCdx(user: string): Promise<string> {
@@ -27,6 +32,12 @@ async function fetchArchiveCdx(user: string): Promise<string> {
   url.searchParams.set('output', 'json');
   url.searchParams.set('limit', '100000');
   url.searchParams.set('collapse', 'digest');
+  // archive.org's CDX has to read each row's `length` from WARC metadata,
+  // and that dominates wall time on prefix scans for active users — large
+  // accounts routinely run past archive's own 60s gateway. Trimming `fl` to
+  // only the columns we consume drops upstream latency roughly in half and
+  // turns 504s from default behaviour into a tail event.
+  url.searchParams.set('fl', 'timestamp,original,mimetype,statuscode,digest');
 
   const res = await fetch(url.toString(), {
     headers: { 'User-Agent': 'omot-edge/1.0 (+https://github.com/ayanamists/oh-my-old-tweet)' },
@@ -37,10 +48,29 @@ async function fetchArchiveCdx(user: string): Promise<string> {
   return res.text();
 }
 
+function countCdxRows(body: string): number | undefined {
+  try {
+    const rows = JSON.parse(body);
+    if (!Array.isArray(rows)) return undefined;
+    // Header detection has to tolerate both schemas: v2 starts with
+    // `timestamp` at index 0; legacy v1 had `urlkey` at 0 and `timestamp`
+    // at 1. Stale v1 cache may still be served as a fallback during deploy.
+    const first = Array.isArray(rows[0]) ? rows[0] : null;
+    const hasHeader = first !== null && (first[0] === 'timestamp' || first[1] === 'timestamp');
+    return Math.max(0, rows.length - (hasHeader ? 1 : 0));
+  } catch {
+    return undefined;
+  }
+}
+
 async function writeCache(env: Env, user: string, body: string): Promise<void> {
+  const rowCount = countCdxRows(body);
   await env.OMOT_CACHE.put(cdxCacheKey(user), body, {
     httpMetadata: { contentType: 'application/json' },
-    customMetadata: { cachedAt: String(Date.now()) },
+    customMetadata: {
+      cachedAt: String(Date.now()),
+      ...(rowCount !== undefined ? { rowCount: String(rowCount) } : {}),
+    },
   });
 }
 
@@ -79,21 +109,31 @@ export async function handleCdx(
   });
 
   const cached = await env.OMOT_CACHE.get(cdxCacheKey(user));
+  let cachedBody: string | undefined;
+  let cachedAge: number | undefined;
+  let cachedRowCount: number | undefined;
   if (cached) {
     const cachedAt = Number(cached.customMetadata?.cachedAt ?? 0);
-    const age = Date.now() - cachedAt;
-    if (age < STALE_MS) {
-      const body = await cached.text();
-      if (age >= FRESH_MS) {
+    cachedAge = Date.now() - cachedAt;
+    cachedBody = await cached.text();
+    cachedRowCount = cached.customMetadata?.rowCount !== undefined
+      ? Number(cached.customMetadata.rowCount)
+      : countCdxRows(cachedBody);
+
+    const freshMs = cachedRowCount === 0 ? EMPTY_FRESH_MS : FRESH_MS;
+    const staleMs = cachedRowCount === 0 ? EMPTY_STALE_MS : STALE_MS;
+
+    if (cachedAge < staleMs) {
+      if (cachedAge >= freshMs) {
         // Stale-while-revalidate: serve cached now, refresh in background.
         ctx.waitUntil(
           fetchArchiveCdx(user)
             .then((fresh) => writeCache(env, user, fresh))
             .catch(() => { /* keep serving stale on upstream failure */ }),
         );
-        return respond(body, 'STALE', age);
+        return respond(cachedBody, 'STALE', cachedAge);
       }
-      return respond(body, 'HIT', age);
+      return respond(cachedBody, 'HIT', cachedAge);
     }
     // Fall through: cache too old to trust, re-fetch synchronously.
   }
@@ -102,12 +142,14 @@ export async function handleCdx(
   try {
     body = await fetchArchiveCdx(user);
   } catch (err) {
-    // If we have an over-stale cache, prefer it over a 502 — better to show
-    // the user something than nothing while archive.org is flapping.
-    if (cached) {
-      const fallback = await cached.text();
-      const age = Date.now() - Number(cached.customMetadata?.cachedAt ?? 0);
-      return respond(fallback, 'STALE', age);
+    // If we have any cached body (even an empty result), prefer it over 502
+    // — better to show the user something than nothing while archive.org is
+    // flapping. The earlier carve-out for empty caches was over-eager: the
+    // EMPTY_FRESH_MS / EMPTY_STALE_MS windows already make negative results
+    // expire much faster than positive ones, so they're never stuck for
+    // long, and serving STALE on upstream failure beats a hard 502.
+    if (cached && cachedBody !== undefined) {
+      return respond(cachedBody, 'STALE', cachedAge);
     }
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 502,

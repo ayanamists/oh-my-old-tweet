@@ -1,16 +1,50 @@
 export type CdxItem = {
-  urlKey: string,
+  urlKey?: string,
   timestamp: string,
   original: string,
   mimetype: string,
   statusCode: number,
   digest: string,
-  length: number,
+  length?: number,
 
   // appended
   id: string,
   date: Date
 }
+
+// Maps CDX column index for each consumed field. `urlKey` and `length` are
+// optional because `fl=` projection on the upstream lets us drop them.
+export type CdxColumns = {
+  urlKey?: number,
+  timestamp: number,
+  original: number,
+  mimetype: number,
+  statusCode: number,
+  digest: number,
+  length?: number,
+};
+
+// Default column layout when archive.org returns the full CDX schema (no `fl=`
+// projection). Indices match the historical `cdxItem[0..6]` access pattern.
+const DEFAULT_COLUMNS: CdxColumns = {
+  urlKey: 0,
+  timestamp: 1,
+  original: 2,
+  mimetype: 3,
+  statusCode: 4,
+  digest: 5,
+  length: 6,
+};
+
+const HEADER_FIELD_TO_KEY: Record<string, keyof CdxColumns> = {
+  urlkey: 'urlKey',
+  timestamp: 'timestamp',
+  original: 'original',
+  mimetype: 'mimetype',
+  statuscode: 'statusCode',
+  digest: 'digest',
+  length: 'length',
+};
 
 export function filterUniqueCdxItems(cdxItems: string[][]) {
   const idSet = new Set<String>();
@@ -72,16 +106,65 @@ export function parseTimeStamp(timestamp: string) {
   return date;
 }
 
-export function parseCdxItem(cdxItem: string[]): CdxItem {
-  return {
-    urlKey: cdxItem[0],
-    timestamp: cdxItem[1],
-    original: cdxItem[2],
-    mimetype: cdxItem[3],
-    statusCode: Number.parseInt(cdxItem[4]),
-    digest: cdxItem[5],
-    length: Number.parseInt(cdxItem[6]),
-    id: getCdxItemId(cdxItem),
-    date: getCdxItemDate(cdxItem),
+// Returns the column layout for a CDX response header row, or undefined if it
+// doesn't look like one (e.g. caller passed a data row, or the schema is
+// missing fields we need to build a CdxItem).
+export function parseCdxHeader(header: string[]): CdxColumns | undefined {
+  if (!Array.isArray(header)) return undefined;
+  const cols: Partial<CdxColumns> = {};
+  for (let i = 0; i < header.length; i++) {
+    const key = HEADER_FIELD_TO_KEY[header[i]];
+    if (key !== undefined) {
+      cols[key] = i;
+    }
   }
+  if (
+    cols.timestamp === undefined ||
+    cols.original === undefined ||
+    cols.mimetype === undefined ||
+    cols.statusCode === undefined ||
+    cols.digest === undefined
+  ) {
+    return undefined;
+  }
+  return cols as CdxColumns;
+}
+
+export function parseCdxItem(cdxItem: string[], cols: CdxColumns = DEFAULT_COLUMNS): CdxItem {
+  const original = cdxItem[cols.original];
+  const timestamp = cdxItem[cols.timestamp];
+  const item: CdxItem = {
+    timestamp,
+    original,
+    mimetype: cdxItem[cols.mimetype],
+    statusCode: Number.parseInt(cdxItem[cols.statusCode]),
+    digest: cdxItem[cols.digest],
+    id: getTweetIdByUrl(original ?? ''),
+    date: parseTimeStamp(timestamp ?? ''),
+  };
+  if (cols.urlKey !== undefined) item.urlKey = cdxItem[cols.urlKey];
+  if (cols.length !== undefined) item.length = Number.parseInt(cdxItem[cols.length]);
+  return item;
+}
+
+// Parses a full archive.org CDX JSON response (header row + data rows) into
+// CdxItems. Tolerates any `fl=` projection because columns are resolved by
+// header name, not positional index. Skips the header row, malformed rows,
+// and duplicate tweet IDs.
+export function parseCdxRows(rows: string[][]): CdxItem[] {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  const cols = parseCdxHeader(rows[0]);
+  if (!cols) return [];
+  const seen = new Set<string>();
+  const items: CdxItem[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!Array.isArray(row)) continue;
+    const item = parseCdxItem(row, cols);
+    if (item.id === 'NaN' || Number.isNaN(item.date.getTime())) continue;
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    items.push(item);
+  }
+  return items;
 }

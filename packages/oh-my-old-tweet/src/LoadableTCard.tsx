@@ -27,7 +27,7 @@ export function LoadableTCard({ user, cdxItem, onProfileLoaded }: {
 
     setPost(p);
 
-    const isSameUser = p.user.userName === user;
+    const isSameUser = (p.user.userName ?? '').toLowerCase() === user.toLowerCase();
     if (onProfileLoaded && isSameUser) onProfileLoaded(p);
 
     const isReply  = p.replyInfo !== undefined;

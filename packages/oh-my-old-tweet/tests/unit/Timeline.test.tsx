@@ -203,4 +203,19 @@ describe('Timeline — subtle filter/scroll behaviour', () => {
 
     await waitFor(() => expect(screen.queryAllByTestId('tcard')).toHaveLength(2));
   });
+
+  it('matches archived usernames case-insensitively', async () => {
+    const items = [makeCdxItem('m1', '2020-06-01')];
+    mockPostMap.set('m1', makePost('m1', { user: 'Mark_Leica', bio: 'Mixed case profile' }));
+    mockCdxList.fn.mockResolvedValue(items);
+
+    const { Timeline } = await import('../../src/Timeline');
+
+    render(<Wrap filter={baseFilter}><Timeline user="mark_leica" /></Wrap>);
+
+    await waitFor(() => {
+      expect(screen.queryAllByTestId('tcard')).toHaveLength(1);
+      expect(screen.queryByText('Mixed case profile')).not.toBeNull();
+    });
+  });
 });

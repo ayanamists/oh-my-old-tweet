@@ -13,12 +13,21 @@ export async function parsePostFromUrl(
   html: string,
   archiveUrl: string,
 ): Promise<Post | undefined> {
-  // archive URL shape: https://web.archive.org/web/<timestamp>/<origUrl>
-  const m = archiveUrl.match(/\/web\/(\d+)\/(https?:\/\/(?:twitter|x)\.com\/([^/]+)\/status\/(\d+))/);
+  // archive URL shape: https://web.archive.org/web/<timestamp>[/mode]/<origUrl>
+  // JSON captures use modes such as if_ after the timestamp.
+  const m = archiveUrl.match(/\/web\/(\d+)(?:[a-z]+_)?\/(https?:\/\/(?:twitter|x)\.com\/([^/]+)\/status\/(\d+))/);
   if (!m) return undefined;
 
   const [, timestamp, , userName, id] = m;
+  const meta = { id, timestamp, userName };
 
   const { parsePost } = await import('twitter-data-parser');
-  return parsePost(html, { id, timestamp, userName });
+  const doc = linkedomParser.parseFromString(html, 'text/html') as unknown as Document;
+  const embeddedJson = doc.querySelector('#jsonview pre')?.textContent;
+  if (embeddedJson) {
+    const post = parsePost(embeddedJson, meta);
+    if (post) return post;
+  }
+
+  return parsePost(html, meta);
 }

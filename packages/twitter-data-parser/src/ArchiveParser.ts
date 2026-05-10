@@ -396,6 +396,14 @@ function extractFromNewArchiveFormat(doc: Document, info: ArchiveTweetInfo1): Po
     return undefined;
   }
 
+  const legacyParsed = safeParsePost(jsonData);
+  if (legacyParsed) {
+    return {
+      ...legacyParsed,
+      archiveUrl: info.pageUrl,
+    };
+  }
+
   try {
     const tweetData = jsonData.data;
     const includes = jsonData.includes;

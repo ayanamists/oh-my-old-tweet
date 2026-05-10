@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 
 [vars]
-PARSER_VERSION = "1"
+PARSER_VERSION = "3"
 ARCHIVE_BASE = "https://web.archive.org"
 
 # ── Bindings (filled in by the operator before first deploy) ──────────────────

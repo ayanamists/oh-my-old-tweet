@@ -47,131 +47,17 @@ async function parseMaybeInWorker(html: string, meta: ArchiveTweetInfo): Promise
   return parsePost(html, meta);
 }
 
-function subtractInterval(a: Interval, b: Interval): Interval[] {
-  const { start: aStart, end: aEnd } = a;
-  const { start: bStart, end: bEnd } = b;
-
-  if (!aStart || !aEnd || !bStart || !bEnd) {
-    throw new Error("All intervals must have both start and end");
-  }
-
-  if (!a.overlaps(b)) {
-    return [a];
-  }
-
-  if (b.contains(aStart) && b.contains(aEnd)) {
-    return [];
-  }
-
-  const parts: Interval[] = [];
-
-  if (aStart < bStart) {
-    parts.push(Interval.fromDateTimes(aStart, bStart));
-  }
-
-  if (aEnd > bEnd) {
-    parts.push(Interval.fromDateTimes(bEnd, aEnd));
-  }
-
-  return parts;
-}
-
-function maxInterval(a: Interval, b: Interval): Interval {
-  const { start: aStart, end: aEnd } = a;
-  const { start: bStart, end: bEnd } = b;
-  if (!aStart || !aEnd || !bStart || !bEnd) {
-    throw new Error("All intervals must have both start and end");
-  }
-  const start = aStart < bStart ? aStart : bStart;
-  const end = aEnd > bEnd ? aEnd : bEnd;
-  return Interval.fromDateTimes(start, end);
-}
-
-function uniqBy<T>(arr: T[], keyFn: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  return arr.filter(item => {
-    const key = keyFn(item);
-    if (seen.has(key)) {
-      return false;
-    } else {
-      seen.add(key);
-      return true;
-    }
-  });
-}
-
-interface CdxCache {
-  user: string;
-  cdxList: CdxItem[];
-  currentInterval: Interval;
-}
-
-const cdxCache: Map<string, CdxCache> = new Map();
-
+// Fetch the CDX list for `user` over `interval`. Pure I/O — caching/dedup is
+// the caller's responsibility (React Query owns it in the UI; CLI/edge own
+// theirs). Edge worker ignores the interval and returns the full timeline;
+// the legacy CORS proxy honours it. When the edge fast path errors out, fall
+// through to the proxy so a single Worker outage doesn't take the UI down.
 export async function getCdxList(config: CorsProxyConfig, user: string, interval: Interval): Promise<CdxItem[]> {
-  const tasks: Interval[] = [];
-  if (!cdxCache.has(user)) {
-    tasks.push(interval);
-  } else {
-    const cache = cdxCache.get(user)!;
-    const { currentInterval } = cache;
-    const newIntervals = subtractInterval(interval, currentInterval);
-    if (newIntervals.length === 0) {
-      return cache.cdxList;
-    } else {
-      tasks.push(...newIntervals);
-    }
-  }
-
-  console.log(`Fetching ${tasks.length} intervals for user ${user}`);
-  for (const task of tasks) {
-    console.log(`Fetching interval ${task.start?.toFormat('yyyyMMddHHmmss')} - ${task.end?.toFormat('yyyyMMddHHmmss')}`);
-  }
-
-  // Edge fast path: when configured, the worker proxies archive.org's CDX
-  // with R2 stale-while-revalidate caching, returning the user's full
-  // timeline in a single call. This bypasses the legacy CORS proxy which
-  // routinely 503s on cold archive.org calls (>30s upstream).
   if (config.edgeUrl) {
     const edgeRows = await tryEdgeCdx(config.edgeUrl, user, config.apiKey);
-    if (edgeRows !== undefined) {
-      const merged = cdxCache.has(user)
-        ? [...cdxCache.get(user)!.cdxList, ...edgeRows]
-        : [...edgeRows];
-      const uniqueCdxList = uniqBy(merged, (i) => i.id);
-      cdxCache.set(user, {
-        user,
-        cdxList: uniqueCdxList,
-        currentInterval: cdxCache.has(user)
-          ? maxInterval(cdxCache.get(user)!.currentInterval, interval)
-          : interval,
-      });
-      return uniqueCdxList;
-    }
-    // Edge unreachable / non-2xx — fall through to per-interval CORS proxy path.
+    if (edgeRows !== undefined) return edgeRows;
   }
-
-  const newCdxList: CdxItem[] = [];
-  if (cdxCache.has(user)) {
-    newCdxList.push(...cdxCache.get(user)!.cdxList);
-  }
-  for (const task of tasks) {
-    const current = await fetchOneCdx(config, user, task)
-    newCdxList.push(...current);
-  }
-
-  const uniqueCdxList = uniqBy(newCdxList, (i) => i.id);
-
-  const newInterval = cdxCache.has(user) ?
-    maxInterval(cdxCache.get(user)!.currentInterval, interval) :
-    interval;
-
-  cdxCache.set(user, {
-    user: user,
-    cdxList: uniqueCdxList,
-    currentInterval: newInterval
-  });
-  return uniqueCdxList;
+  return fetchOneCdx(config, user, interval);
 }
 
 function fetchOneCdx(config: CorsProxyConfig, user: string, interval: Interval): Promise<CdxItem[]> {

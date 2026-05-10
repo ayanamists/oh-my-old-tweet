@@ -4,7 +4,7 @@ import { getCdxList, MinimalCdxInfo } from "./Data";
 import { LoadableTCard } from "./LoadableTCard";
 import { SkeletonList } from "./SkeletonCard";
 import { ConfigContext } from "./context/ConfigContext";
-import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary } from "react-error-boundary";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { FilterContext } from "./context/FilterContext";
 import { DateTime } from "luxon";
@@ -12,9 +12,9 @@ import { ChevronLeft, ChevronRight, ChevronUp, MapPin, Link as LinkIcon } from "
 import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 const PAGE_SIZE = 30;
-const MAX_VISIBLE_ITEMS = 120;
 
 interface VisibleRange {
   start: number;
@@ -34,19 +34,21 @@ function getInitialRange(total: number, focusIndex: number | undefined): Visible
   return { start, end: Math.min(total, start + PAGE_SIZE) };
 }
 
+// Window only grows. The previous design capped at MAX_VISIBLE_ITEMS=120 by
+// sliding `start` forward as `end` advanced, but unmounting cards above the
+// viewport during fast scrolling broke browser scroll anchoring (visible
+// jitter) and forced a skeleton-flash on scroll-back (cards re-mounting
+// through async IDB lookup). Memory cost of unbounded growth is one
+// LoadableTCard per cdx row, which React 18 + per-tweet IDB cache handles
+// fine into the low thousands.
 function appendPage(range: VisibleRange, total: number): VisibleRange {
   if (range.end >= total) return range;
-  const end = Math.min(total, range.end + PAGE_SIZE);
-  return {
-    start: end - range.start > MAX_VISIBLE_ITEMS ? end - MAX_VISIBLE_ITEMS : range.start,
-    end,
-  };
+  return { start: range.start, end: Math.min(total, range.end + PAGE_SIZE) };
 }
 
 function prependPage(range: VisibleRange): VisibleRange {
   if (range.start <= 0) return range;
-  const start = Math.max(0, range.start - PAGE_SIZE);
-  return { start, end: Math.min(range.end, start + MAX_VISIBLE_ITEMS) };
+  return { start: Math.max(0, range.start - PAGE_SIZE), end: range.end };
 }
 
 function TimelineCdxItem({
@@ -191,18 +193,55 @@ function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNex
 // ─── Timeline1 ────────────────────────────────────────────────────────────────
 
 function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
-  const cdxList             = useRef<CdxItem[] | null>(null);
-  const [visibleRange, setVisibleRange] = useState<VisibleRange>({ start: 0, end: 0 });
-  const [totalCount, setTotalCount] = useState(0);
-  const { config }          = useContext(ConfigContext);
-  const [cdxLoading, setCdxLoading] = useState(true);
-  const { showBoundary }    = useErrorBoundary();
-  const containerRef        = useRef<HTMLDivElement | null>(null);
-  const focusScrollPending  = useRef(false);
+  const { config }       = useContext(ConfigContext);
+  const { tweetFilter }  = useContext(FilterContext);
+  const { dateInRange, sortOrder } = tweetFilter;
+  const containerRef     = useRef<HTMLDivElement | null>(null);
+  const focusScrollPending = useRef(false);
 
-  const [profiles, setProfiles]             = useState<User[]>([]);
-  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
-  const [profileDate, setProfileDate]       = useState('');
+  // CDX data: React Query owns the cache + request lifecycle. Stale resolves
+  // can no longer pollute current state — they only land in their own
+  // queryKey's cache slot.
+  const cdxQuery = useQuery({
+    queryKey: [
+      'cdx',
+      user,
+      dateInRange.start?.toISO() ?? '',
+      dateInRange.end?.toISO() ?? '',
+    ],
+    queryFn: () => getCdxList(config!, user, dateInRange),
+    enabled: !!config,
+    throwOnError: true,
+  });
+
+  const ordered = useMemo<CdxItem[]>(() => {
+    if (!cdxQuery.data) return [];
+    const filtered = cdxQuery.data
+      .filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+    return sortOrder === 'desc' ? filtered.reverse() : filtered;
+  }, [cdxQuery.data, dateInRange, sortOrder]);
+
+  const focusIndex = useMemo(
+    () => focusId ? ordered.findIndex(i => i.id === focusId) : -1,
+    [ordered, focusId],
+  );
+  const totalCount = ordered.length;
+
+  // visibleRange is local UI state; it must reset when the underlying list
+  // identity or the focus target changes. setState-during-render is the
+  // React-recommended pattern here — useEffect would leak one stale frame
+  // (see https://react.dev/reference/react/useState#storing-information-from-previous-renders).
+  const [tracked, setTracked] = useState<{ ordered: CdxItem[]; focusId: string | undefined }>({
+    ordered: [],
+    focusId: undefined,
+  });
+  const [visibleRange, setVisibleRange] = useState<VisibleRange>({ start: 0, end: 0 });
+  if (tracked.ordered !== ordered || tracked.focusId !== focusId) {
+    setTracked({ ordered, focusId });
+    setVisibleRange(getInitialRange(totalCount, focusIndex >= 0 ? focusIndex : undefined));
+    focusScrollPending.current = focusIndex >= 0;
+  }
 
   const loadNextPage = useCallback(() => {
     setVisibleRange(range => appendPage(range, totalCount));
@@ -211,6 +250,13 @@ function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
   const loadPreviousPage = useCallback(() => {
     setVisibleRange(prependPage);
   }, []);
+
+  // Profile snapshots accumulate across paginated tweets. Cross-user state
+  // pollution is prevented by `key={user}` at the Timeline export — this
+  // component remounts on user change, so profiles starts empty for each user.
+  const [profiles, setProfiles] = useState<User[]>([]);
+  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
+  const [profileDate, setProfileDate] = useState('');
 
   const handleProfileLoaded = useCallback((post: Post) => {
     if (post.user?.profileInfo) {
@@ -233,34 +279,6 @@ function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
     />
   ), [focusId, handleProfileLoaded, user]);
 
-  const { tweetFilter } = useContext(FilterContext);
-  const { dateInRange, sortOrder } = tweetFilter;
-
-  useEffect(() => {
-    setCdxLoading(true);
-    cdxList.current = null;
-    setVisibleRange({ start: 0, end: 0 });
-    setTotalCount(0);
-    // Drop the previous user's accumulated profile snapshots before fetching.
-    // Otherwise switching A -> B leaves A's avatar/bio in the sidebar until
-    // (and even after) B's posts append their own profile.
-    setProfiles([]);
-    setCurrentProfileIndex(0);
-    setProfileDate('');
-    getCdxList(config!, user, dateInRange).then(data => {
-      const filtered = data
-        .filter(i => dateInRange.contains(DateTime.fromJSDate(i.date)))
-        .sort((a, b) => a.date.getTime() - b.date.getTime());
-      const ordered = sortOrder === 'desc' ? filtered.reverse() : filtered;
-      const focusIndex = focusId ? ordered.findIndex(i => i.id === focusId) : -1;
-      cdxList.current = ordered;
-      setTotalCount(ordered.length);
-      setVisibleRange(getInitialRange(ordered.length, focusIndex >= 0 ? focusIndex : undefined));
-      focusScrollPending.current = focusIndex >= 0;
-      setCdxLoading(false);
-    }).catch(showBoundary);
-  }, [config, user, showBoundary, dateInRange, sortOrder, focusId]);
-
   useEffect(() => {
     if (profiles.length > 0) {
       const profile = profiles[currentProfileIndex];
@@ -277,7 +295,7 @@ function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
   // entirely within the viewport.
   useEffect(() => {
     const hasNext = visibleRange.end < totalCount;
-    if (!hasNext || cdxLoading) return;
+    if (!hasNext || cdxQuery.isPending) return;
     const node = containerRef.current;
     if (!node) return;
 
@@ -297,10 +315,10 @@ function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
       cancelAnimationFrame(raf);
       ro?.disconnect();
     };
-  }, [visibleRange.start, visibleRange.end, totalCount, cdxLoading, loadNextPage]);
+  }, [visibleRange.start, visibleRange.end, totalCount, cdxQuery.isPending, loadNextPage]);
 
   useEffect(() => {
-    if (cdxLoading || !focusScrollPending.current) return;
+    if (cdxQuery.isPending || !focusScrollPending.current) return;
 
     const raf = requestAnimationFrame(() => {
       const focusEl = document.querySelector('[data-focus-tweet="true"]');
@@ -311,17 +329,17 @@ function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
     });
 
     return () => cancelAnimationFrame(raf);
-  }, [cdxLoading, visibleRange.start, visibleRange.end, focusId]);
+  }, [cdxQuery.isPending, visibleRange.start, visibleRange.end, focusId]);
 
   const currentProfile = profiles.length > 0 ? profiles[currentProfileIndex] : null;
 
   function tweetListContent() {
-    const items = cdxList.current?.slice(visibleRange.start, visibleRange.end) ?? [];
+    const items = ordered.slice(visibleRange.start, visibleRange.end);
     const hasPrevious = visibleRange.start > 0;
     const hasNext = visibleRange.end < totalCount;
     const previousLabel = sortOrder === 'desc' ? 'Load newer tweets' : 'Load older tweets';
 
-    if (cdxLoading) return <SkeletonList count={8} />;
+    if (cdxQuery.isPending) return <SkeletonList count={8} />;
     if (totalCount === 0) return (
       <div className="py-16 text-center space-y-2">
         <p className="text-muted-foreground">No archived tweets found for <strong>@{user}</strong>.</p>
@@ -399,9 +417,14 @@ function Timeline1({ user, focusId }: { user: string; focusId?: string }) {
 }
 
 export function Timeline({ user, focusId }: { user: string; focusId?: string }) {
+  // key={user} forces a fresh Timeline1 instance on user change. All in-memory
+  // state — visibleRange, profiles, in-flight LoadableTCard fetches — gets
+  // dropped at the React reconciliation level, so cross-user residue (e.g.
+  // "A's profile still showing on B's page" frame) cannot occur. Within a
+  // single user, React Query's per-queryKey cache prevents stale .then writes.
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <Timeline1 user={user} focusId={focusId} />
+      <Timeline1 key={user} user={user} focusId={focusId} />
     </ErrorBoundary>
   );
 }

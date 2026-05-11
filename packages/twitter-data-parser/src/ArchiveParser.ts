@@ -1,6 +1,6 @@
 import { safeParsePost } from "./JsonDataParser";
 import { parseDOM } from "./PolyfillDOMParser";
-import { getWarn } from "./Utils";
+import { fixImageUrl, fixImageUrlNew, getWarn } from "./Utils";
 import { Post, ReplyInfo, ProfileInfo } from "./types";
 
 export type ArchiveTweetInfo = {
@@ -26,7 +26,7 @@ export function getArchiveUrl({ id, timestamp, userName }: ArchiveTweetInfo) {
 export function parsePost(data: string, { id, timestamp, userName }: ArchiveTweetInfo) : Post | undefined {
   try {
     const jsonData = JSON.parse(data);
-    const parsed = safeParsePost(jsonData);
+    const parsed = safeParsePost(jsonData, { timestamp });
     if (parsed != null) {
       return {
         ...parsed,
@@ -335,43 +335,6 @@ function isReply(mainRegion: Element) {
   return mainRegion.classList.contains("ThreadedConversation");
 }
 
-function toHttps(url: string) {
-  const urlObj = new URL(url);
-  if (urlObj.protocol === 'http:') {
-    urlObj.protocol = 'https:';
-  }
-  return urlObj.toString();
-}
-
-function fixImageUrl(url: string, info: { timestamp: string }) {
-  const urlObj = new URL(url);
-  if (urlObj.hostname !== "web.archive.org") {
-    return `https://web.archive.org/web/${info.timestamp}im_/${url}`
-  } else {
-    return toHttps(url);
-  }
-}
-
-
-function fixImageUrlNew(url: string, info: { timestamp: string }) {
-  const urlObj = new URL(url);
-  const path = urlObj.pathname;
-  const segs = path.split('/');
-  const fileName = segs[segs.length - 1];
-
-  // 分离扩展名和文件名
-  const dotIndex = fileName.lastIndexOf('.');
-  const baseName = dotIndex >= 0 ? fileName.slice(0, dotIndex) : fileName;
-  const ext = dotIndex >= 0 ? fileName.slice(dotIndex + 1) : '';
-
-  // 拼接 archive url
-  return `https://web.archive.org/web/${info.timestamp}im_/${urlObj.origin}${path.replace(
-    fileName,
-    baseName
-  )}?format=${ext}&name=orig`;
-}
-
-
 function extractFromNewArchiveFormat(doc: Document, info: ArchiveTweetInfo1): Post | undefined {
   // Look for the new archive format with .tweet-container and embedded JSON
   const tweetContainer = doc.querySelector('.tweet-container');
@@ -396,7 +359,7 @@ function extractFromNewArchiveFormat(doc: Document, info: ArchiveTweetInfo1): Po
     return undefined;
   }
 
-  const legacyParsed = safeParsePost(jsonData);
+  const legacyParsed = safeParsePost(jsonData, info);
   if (legacyParsed) {
     return {
       ...legacyParsed,

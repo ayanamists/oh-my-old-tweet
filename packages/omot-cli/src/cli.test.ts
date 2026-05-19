@@ -1,15 +1,27 @@
-import { buildProgram, CliHandlers, MatchArgs, RuntimeOptions, SolveArgs } from "./cli";
+import {
+  buildProgram,
+  CircleArgs,
+  CliHandlers,
+  GraphArgs,
+  MatchArgs,
+  RuntimeOptions,
+  SolveArgs,
+} from "./cli";
 
 type Captured = {
   solve: jest.Mock<Promise<void>, [SolveArgs, RuntimeOptions]>;
   match: jest.Mock<Promise<void>, [MatchArgs, RuntimeOptions]>;
+  graph: jest.Mock<Promise<void>, [GraphArgs, RuntimeOptions]>;
+  circle: jest.Mock<Promise<void>, [CircleArgs, RuntimeOptions]>;
   handlers: CliHandlers;
 };
 
 function makeCaptured(): Captured {
   const solve = jest.fn(async (_a: SolveArgs, _r: RuntimeOptions) => {});
   const match = jest.fn(async (_a: MatchArgs, _r: RuntimeOptions) => {});
-  return { solve, match, handlers: { solve, match } };
+  const graph = jest.fn(async (_a: GraphArgs, _r: RuntimeOptions) => {});
+  const circle = jest.fn(async (_a: CircleArgs, _r: RuntimeOptions) => {});
+  return { solve, match, graph, circle, handlers: { solve, match, graph, circle } };
 }
 
 async function run(handlers: CliHandlers, args: string[]): Promise<void> {
@@ -160,7 +172,139 @@ describe("buildProgram", () => {
         throw new Error("solve boom");
       },
       match: async () => {},
+      graph: async () => {},
+      circle: async () => {},
     };
     await expect(run(handlers, ["solve", "jack"])).rejects.toThrow("solve boom");
+  });
+
+  describe("graph subcommand", () => {
+    it("uses sensible defaults", async () => {
+      const c = makeCaptured();
+      await run(c.handlers, ["graph", "jack"]);
+      expect(c.graph).toHaveBeenCalledTimes(1);
+      const [args] = c.graph.mock.calls[0];
+      expect(args).toEqual({
+        user: "jack",
+        maxDepth: 1,
+        maxItems: 1000,
+        format: "json",
+        output: undefined,
+      });
+    });
+
+    it("accepts --format graphml and -o", async () => {
+      const c = makeCaptured();
+      await run(c.handlers, [
+        "graph",
+        "jack",
+        "--format",
+        "graphml",
+        "-o",
+        "jack.graphml",
+      ]);
+      const [args] = c.graph.mock.calls[0];
+      expect(args.format).toBe("graphml");
+      expect(args.output).toBe("jack.graphml");
+    });
+
+    it("rejects an unknown --format value", async () => {
+      const c = makeCaptured();
+      await expect(
+        run(c.handlers, ["graph", "jack", "--format", "yaml"]),
+      ).rejects.toThrow();
+      expect(c.graph).not.toHaveBeenCalled();
+    });
+
+    it("propagates --max-depth and --max-items", async () => {
+      const c = makeCaptured();
+      await run(c.handlers, [
+        "graph",
+        "jack",
+        "--max-depth",
+        "2",
+        "--max-items",
+        "5000",
+      ]);
+      const [args] = c.graph.mock.calls[0];
+      expect(args.maxDepth).toBe(2);
+      expect(args.maxItems).toBe(5000);
+    });
+
+    it("requires the user argument", async () => {
+      const c = makeCaptured();
+      await expect(run(c.handlers, ["graph"])).rejects.toThrow();
+      expect(c.graph).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("circle subcommand", () => {
+    it("routes with sensible defaults", async () => {
+      const c = makeCaptured();
+      await run(c.handlers, ["circle", "jack"]);
+      expect(c.circle).toHaveBeenCalledTimes(1);
+      const [args] = c.circle.mock.calls[0];
+      expect(args.user).toBe("jack");
+      expect(args.maxDepth).toBe(1);
+      expect(args.maxItems).toBe(1000);
+      expect(args.top).toBe(20);
+      expect(args.json).toBe(false);
+      expect(args.year).toBeUndefined();
+      expect(args.fromFile).toBeUndefined();
+    });
+
+    it("accepts --year, --top and --json", async () => {
+      const c = makeCaptured();
+      await run(c.handlers, [
+        "circle",
+        "jack",
+        "--year",
+        "2010",
+        "--top",
+        "5",
+        "--json",
+      ]);
+      const [args] = c.circle.mock.calls[0];
+      expect(args.year).toBe(2010);
+      expect(args.top).toBe(5);
+      expect(args.json).toBe(true);
+    });
+
+    it("accepts --from and --to date strings", async () => {
+      const c = makeCaptured();
+      await run(c.handlers, [
+        "circle",
+        "jack",
+        "--from",
+        "2010-01-01",
+        "--to",
+        "2010-12-31",
+      ]);
+      const [args] = c.circle.mock.calls[0];
+      expect(args.from).toBe("2010-01-01");
+      expect(args.to).toBe("2010-12-31");
+    });
+
+    it("allows omitting <user> when --from-file is set", async () => {
+      const c = makeCaptured();
+      await run(c.handlers, ["circle", "--from-file", "jack.json"]);
+      const [args] = c.circle.mock.calls[0];
+      expect(args.user).toBeUndefined();
+      expect(args.fromFile).toBe("jack.json");
+    });
+
+    it("rejects when neither <user> nor --from-file is provided", async () => {
+      const c = makeCaptured();
+      await expect(run(c.handlers, ["circle"])).rejects.toThrow();
+      expect(c.circle).not.toHaveBeenCalled();
+    });
+
+    it("rejects --top=0", async () => {
+      const c = makeCaptured();
+      await expect(
+        run(c.handlers, ["circle", "jack", "--top", "0"]),
+      ).rejects.toThrow();
+      expect(c.circle).not.toHaveBeenCalled();
+    });
   });
 });

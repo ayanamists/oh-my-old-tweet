@@ -47,20 +47,70 @@ We provide a `cli` for experimental use.
    ```
 3. Extracted data will be printed to the console
 
-### Use cli to find old usernames
+### Use the `omot-cli` binary
 
-For a given username, we try to find all old usernames of this user. This is useful when a user has changed his/her username. 
+Build once, then invoke `omot-cli` (or `node dist/index.js`) with one of the
+subcommands.
 
-1. `cd omot-cli`
-2. `yarn build`
-3. `yarn start -s <username>`, e.g.
-   ```
-   yarn start -s _iori_n
-   ```
-4. When program exits, the result will be printed to the console  
+1. `cd packages/omot-cli`
+2. `yarn build` — emits `dist/index.js` with a shebang and exec bit.
+
+#### `solve <user>` — find old usernames
+
+For a given username, we try to find all old usernames of this user. Useful
+when a user has changed their username.
+
+```
+./dist/index.js solve _iori_n
+```
+
+When the program exits, the result is printed to the console.
+
+#### `match <regex> <seeds...>` — find posts by keyword
+
+Recursively search for posts whose text matches a regex or any listed literal
+keyword. The walk starts from the listed seed users and expands via every reply
+target it sees up to `--max-depth` (default `1`, use `0` to disable expansion).
+By default it inspects at most 1000 snapshot/CDX items across all users; adjust
+with `--max-items`, or use `--max-items 0` for unlimited search.
+
+```
+./dist/index.js match 'launch|beta' jack ev biz --max-depth 2 --flags gi
+./dist/index.js match 'launch|beta' jack --keyword 小楚 --keyword 小秦
+./dist/index.js match 'launch|beta' jack --max-items 5000
+```
 
 
 **NOTE**: This is an experimental feature and may not work properly. This calculation may takes non-trivial time. You can run `<ctrl>+c` to stop the process, and the result will be printed to the console.
+
+#### `graph <user>` — export a weighted reply graph
+
+Walks the reply graph rooted at `<user>` and emits it as JSON (default) or
+GraphML for Gephi / NetworkX / D3. Edges carry every interaction's date and
+archive URL, so the graph can be sliced by time downstream.
+
+```
+./dist/index.js graph jack > jack.json
+./dist/index.js graph jack --format graphml -o jack.graphml
+./dist/index.js graph jack --max-depth 2 --max-items 5000
+```
+
+Progress is written to stderr so `> file.json` works.
+
+#### `circle <user> [--year YYYY]` — rank the user's reply circle
+
+Computes in/out degree (weighted by interaction count) and PageRank over the
+reply graph, optionally restricted to a calendar year or arbitrary date range.
+The "social drift" use case — *who was X's closest reply partner in 2010 vs.
+2015* — is exactly what this is built for.
+
+```
+./dist/index.js circle jack --year 2010 --top 20
+./dist/index.js circle jack --from 2010-01-01 --to 2012-12-31
+./dist/index.js circle --from-file jack.json --year 2008 --json
+```
+
+Pair with `graph` to avoid recrawling: dump once, slice cheaply.
 
 ## How it works
 
@@ -69,7 +119,7 @@ For a given username, we try to find all old usernames of this user. This is use
 ## Notices
 
 - Internet Archive may not have crawled all tweets. Especially, from 2023.06, Twitter has changed its policy and Internet Archive may not be able to actively crawl tweets.
-- For most cases, Internet Archive cannot crawl video in tweets. We don't implement video feature for now. However, in some cases, Internet Archive may have crawled video in tweets. We plan to implement this feature in the future.
+- For most cases, Internet Archive cannot crawl video in tweets. We don't implement video feature for now. However, in some cases, Internet Archive may have crawled video in tweets. See [Twitter video recovery from Wayback](docs/twitter-video-wayback-recovery.md) for the current research notes.
 - Internet Archive may not be able to save NSFW tweets.
 - Currently, we don't properly handle retweets and replies (**You can contribute!**).
 

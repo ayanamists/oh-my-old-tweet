@@ -23,9 +23,33 @@ export type MatchArgs = {
   maxItems: number;
 };
 
+export type GraphFormat = "json" | "graphml";
+
+export type GraphArgs = {
+  user: string;
+  maxDepth: number;
+  maxItems: number;
+  format: GraphFormat;
+  output?: string;
+};
+
+export type CircleArgs = {
+  user?: string;
+  fromFile?: string;
+  maxDepth: number;
+  maxItems: number;
+  year?: number;
+  from?: string;
+  to?: string;
+  top: number;
+  json: boolean;
+};
+
 export type CliHandlers = {
   solve: (args: SolveArgs, runtime: RuntimeOptions) => Promise<void>;
   match: (args: MatchArgs, runtime: RuntimeOptions) => Promise<void>;
+  graph: (args: GraphArgs, runtime: RuntimeOptions) => Promise<void>;
+  circle: (args: CircleArgs, runtime: RuntimeOptions) => Promise<void>;
 };
 
 const DEFAULT_EDGE_URL = "https://omot-edge.ayanamists.workers.dev";
@@ -139,7 +163,108 @@ export function buildProgram(handlers: CliHandlers, version = "1.0.0"): Command 
       },
     );
 
+  program
+    .command("graph")
+    .description("build a weighted reply graph rooted at a user and dump it as JSON or GraphML")
+    .argument("<user>", "seed twitter username")
+    .option(
+      "-d, --max-depth <n>",
+      "max recursion depth (0 = seed only, 1 = include reply targets' timelines)",
+      parseNonNegativeInt,
+      1,
+    )
+    .option(
+      "--max-items <n>",
+      "max snapshot/CDX items to inspect across all users (0 = unlimited)",
+      parseNonNegativeInt,
+      parseNonNegativeInt(process.env.OMOT_CLI_MAX_ITEMS ?? String(DEFAULT_MAX_ITEMS)),
+    )
+    .option("--format <fmt>", "output format: json or graphml", parseGraphFormat, "json")
+    .option("-o, --output <path>", "write to file instead of stdout")
+    .action(
+      async (
+        user: string,
+        opts: { maxDepth: number; maxItems: number; format: GraphFormat; output?: string },
+        cmd: Command,
+      ) => {
+        const runtime = buildRuntime(cmd.optsWithGlobals());
+        await handlers.graph(
+          {
+            user,
+            maxDepth: opts.maxDepth,
+            maxItems: opts.maxItems,
+            format: opts.format,
+            output: opts.output,
+          },
+          runtime,
+        );
+      },
+    );
+
+  program
+    .command("circle")
+    .description("rank a user's reply circle by weighted degree + PageRank, optionally sliced by time")
+    .argument("[user]", "seed twitter username (omit when --from-file is set)")
+    .option("--from-file <path>", "load a graph JSON produced by `graph` instead of crawling")
+    .option(
+      "-d, --max-depth <n>",
+      "max recursion depth when crawling (ignored with --from-file)",
+      parseNonNegativeInt,
+      1,
+    )
+    .option(
+      "--max-items <n>",
+      "max snapshot/CDX items to inspect across all users when crawling (0 = unlimited)",
+      parseNonNegativeInt,
+      parseNonNegativeInt(process.env.OMOT_CLI_MAX_ITEMS ?? String(DEFAULT_MAX_ITEMS)),
+    )
+    .option("--year <year>", "restrict to a single calendar year (UTC)", parsePositiveInt)
+    .option("--from <date>", "ISO start date (inclusive), e.g. 2010-01-01")
+    .option("--to <date>", "ISO end date (inclusive), e.g. 2010-12-31")
+    .option("--top <n>", "show top N users by PageRank", parsePositiveInt, 20)
+    .option("--json", "emit JSON instead of a text table", false)
+    .action(
+      async (
+        user: string | undefined,
+        opts: {
+          fromFile?: string;
+          maxDepth: number;
+          maxItems: number;
+          year?: number;
+          from?: string;
+          to?: string;
+          top: number;
+          json: boolean;
+        },
+        cmd: Command,
+      ) => {
+        if (!user && !opts.fromFile) {
+          throw new Error("circle requires either <user> or --from-file");
+        }
+        const runtime = buildRuntime(cmd.optsWithGlobals());
+        await handlers.circle(
+          {
+            user,
+            fromFile: opts.fromFile,
+            maxDepth: opts.maxDepth,
+            maxItems: opts.maxItems,
+            year: opts.year,
+            from: opts.from,
+            to: opts.to,
+            top: opts.top,
+            json: opts.json,
+          },
+          runtime,
+        );
+      },
+    );
+
   return program;
+}
+
+function parseGraphFormat(value: string): GraphFormat {
+  if (value === "json" || value === "graphml") return value;
+  throw new Error(`Expected --format=json|graphml, got ${value}`);
 }
 
 function collect(value: string, previous: string[]): string[] {

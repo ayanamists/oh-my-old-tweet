@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import {
   CdxItem,
   Post,
@@ -16,10 +17,28 @@ setGlobalDispatcher(
 
 import fetchBuilder from "fetch-retry";
 import { exit } from "process";
+import * as fs from "fs";
 
-const DEFAULT_EDGE_URL = "https://omot-edge.ayanamists.workers.dev";
-const DEFAULT_CONCURRENCY = 16;
-const DEFAULT_CDX_CONCURRENCY = 3;
+import { matchKeyword } from "./keywordMatch";
+import { buildReplyGraph, ReplyGraph, serializeGraphML } from "./replyGraph";
+import {
+  computeMetrics,
+  filterGraphByTime,
+  formatCircleTable,
+  rangeForYear,
+  TimeRange,
+} from "./centrality";
+import {
+  buildProgram,
+  CircleArgs,
+  CliHandlers,
+  EdgeOptions,
+  GraphArgs,
+  MatchArgs,
+  RuntimeOptions,
+  SolveArgs,
+} from "./cli";
+
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
 
 const fetch = fetchBuilder(global.fetch, {
@@ -31,26 +50,6 @@ const fetch = fetchBuilder(global.fetch, {
     return response != null && RETRYABLE_STATUS.has(response.status);
   },
 });
-
-type EdgeOptions = {
-  enabled: boolean;
-  url: string;
-  apiKey?: string;
-};
-
-type RuntimeOptions = {
-  edge: EdgeOptions;
-  concurrency: number;
-  cdxConcurrency: number;
-};
-
-function parsePositiveInt(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    throw new Error(`Expected a positive integer, got ${value}`);
-  }
-  return parsed;
-}
 
 function trimTrailingSlash(url: string): string {
   return url.replace(/\/$/, "");
@@ -113,13 +112,13 @@ async function getCdxListFromEdge(user: string, edge: EdgeOptions): Promise<CdxI
   try {
     const url = new URL(`${trimTrailingSlash(edge.url)}/cdx`);
     url.searchParams.set("user", user);
-    console.log(`Fetching cdx via edge: ${url.toString()}`);
+    console.error(`Fetching cdx via edge: ${url.toString()}`);
     const rows = await fetchJson<string[][]>(url.toString(), {
       headers: authHeaders(edge),
     });
     return parseCdxRows(rows);
   } catch (err) {
-    console.log(`edge cdx failed for ${user}, falling back to archive.org: ${err}`);
+    console.error(`edge cdx failed for ${user}, falling back to archive.org: ${err}`);
     return undefined;
   }
 }
@@ -132,7 +131,7 @@ async function getCdxListFromArchive(user: string): Promise<CdxItem[]> {
   url.searchParams.set("limit", "100000");
   url.searchParams.set("collapse", "digest");
 
-  console.log(`Fetching cdx: ${url.toString()}`);
+  console.error(`Fetching cdx: ${url.toString()}`);
   const rows = await fetchJson<string[][]>(url.toString());
   return parseCdxRows(rows);
 }
@@ -224,7 +223,7 @@ async function visitPost(user: string, info: CdxItem, options: RuntimeOptions, f
     }
   } catch (err) {
     const url = getArchiveUrl({ id: info.id, timestamp: info.timestamp, userName: user });
-    console.log(`url failed: ${url}, err: ${err}`);
+    console.error(`url failed: ${url}, err: ${err}`);
   }
 }
 
@@ -443,49 +442,179 @@ async function solve(user: string, options: RuntimeOptions) {
   console.log(userNames);
 }
 
+async function runMatch(args: MatchArgs, runtime: RuntimeOptions): Promise<void> {
+  let patterns: RegExp[];
+  try {
+    patterns = [
+      new RegExp(args.regex, args.flags),
+      ...args.keywords.map((keyword) => new RegExp(escapeRegExp(keyword), args.flags)),
+    ];
+  } catch (err) {
+    throw new Error(`invalid match pattern: ${err}`);
+  }
+
+  const cdxLimiter = new AsyncLimiter(runtime.cdxConcurrency);
+  console.log(`Search budget: ${args.maxItems > 0 ? `${args.maxItems} items` : "unlimited"}`);
+  const results = await matchKeyword({
+    seeds: args.seeds,
+    patterns,
+    maxDepth: args.maxDepth,
+    maxItems: args.maxItems,
+    concurrency: runtime.concurrency,
+    fetchCdx: (u) => cdxLimiter.run(() => getCdxList(u, runtime)),
+    fetchPost: (_u, item) => getOnePage(item, runtime),
+    onUserStart: (u, depth, total, selected, remaining) => {
+      const budget = remaining === undefined ? "" : `, ${remaining} budget items left`;
+      console.log(`[depth=${depth}] ${u}: inspecting ${selected}/${total} cdx items${budget}`);
+    },
+    onMatch: (m) => {
+      const snippet = (m.post.text ?? "").replace(/\s+/g, " ").slice(0, 200);
+      console.log(`MATCH [d=${m.depth}] @${m.seedUser} ${m.post.archiveUrl}\n  ${snippet}`);
+    },
+    onError: (u, err) => console.log(`error for ${u}: ${err}`),
+  });
+  console.log(`\nTotal matched posts: ${results.length}`);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 process.on("SIGINT", () => {
   logResult();
   exit(-1);
 });
 
-const { Command } = require("commander");
-const program = new Command();
-program
-  .description("cli from omot, developing")
-  .argument("user", "username to process")
-  .option("-s, --solve", "find all possible usernames belonging to the user")
-  .option("--edge-url <url>", "omot-edge server URL", process.env.OMOT_EDGE_URL ?? DEFAULT_EDGE_URL)
-  .option("--edge-api-key <key>", "Bearer token for omot-edge, defaults to OMOT_API_KEY", process.env.OMOT_API_KEY)
-  .option("--no-edge", "disable omot-edge and fetch archive.org directly")
-  .option(
-    "-c, --concurrency <n>",
-    "maximum concurrent snapshot requests",
-    parsePositiveInt,
-    parsePositiveInt(process.env.OMOT_CLI_CONCURRENCY ?? String(DEFAULT_CONCURRENCY)),
-  )
-  .option(
-    "--cdx-concurrency <n>",
-    "maximum concurrent CDX requests",
-    parsePositiveInt,
-    parsePositiveInt(process.env.OMOT_CLI_CDX_CONCURRENCY ?? String(DEFAULT_CDX_CONCURRENCY)),
-  )
-  .action((user: string, cliOptions: any) => {
-    const runtimeOptions: RuntimeOptions = {
-      edge: {
-        enabled: cliOptions.edge !== false && Boolean(cliOptions.edgeUrl),
-        url: cliOptions.edgeUrl,
-        apiKey: cliOptions.edgeApiKey,
-      },
-      concurrency: cliOptions.concurrency,
-      cdxConcurrency: cliOptions.cdxConcurrency,
-    };
+async function runGraph(args: GraphArgs, runtime: RuntimeOptions): Promise<void> {
+  const graph = await crawlGraph(args.user, args, runtime);
+  const out =
+    args.format === "graphml" ? serializeGraphML(graph) : JSON.stringify(graph, null, 2);
+  if (args.output) {
+    await fs.promises.writeFile(args.output, out, "utf8");
+    console.error(`Wrote ${args.output}`);
+  } else {
+    process.stdout.write(out);
+    process.stdout.write("\n");
+  }
+}
 
-    if (cliOptions.solve) {
-      solve(user, runtimeOptions).catch((err) => {
-        console.error(err);
-        exit(1);
-      });
-    }
+async function runCircle(args: CircleArgs, runtime: RuntimeOptions): Promise<void> {
+  let graph: ReplyGraph;
+  if (args.fromFile) {
+    const raw = await fs.promises.readFile(args.fromFile, "utf8");
+    graph = JSON.parse(raw) as ReplyGraph;
+    console.error(
+      `Loaded graph from ${args.fromFile}: ${Object.keys(graph.nodes).length} nodes, ${graph.edges.length} edges`,
+    );
+  } else if (args.user) {
+    graph = await crawlGraph(args.user, args, runtime);
+  } else {
+    throw new Error("circle requires either <user> or --from-file");
+  }
+
+  const range = resolveTimeRange(args);
+  const filtered = filterGraphByTime(graph, range);
+  if (rangeHasBound(range)) {
+    console.error(
+      `Filtered: ${filtered.edges.length} edges remain (from ${graph.edges.length})`,
+    );
+  }
+
+  const metrics = computeMetrics(filtered)
+    .filter((m) => m.weightedInDegree > 0 || m.weightedOutDegree > 0)
+    .sort((a, b) => b.pageRank - a.pageRank)
+    .slice(0, args.top);
+
+  if (args.json) {
+    process.stdout.write(
+      JSON.stringify(
+        {
+          rootUser: graph.rootUser,
+          range: {
+            from: range.from?.toISOString(),
+            to: range.to?.toISOString(),
+          },
+          metrics,
+        },
+        null,
+        2,
+      ),
+    );
+    process.stdout.write("\n");
+  } else {
+    process.stdout.write(
+      formatCircleTable(
+        graph.rootUser,
+        range,
+        filtered.edges.length,
+        Object.keys(filtered.nodes).length,
+        metrics,
+      ),
+    );
+    process.stdout.write("\n");
+  }
+}
+
+async function crawlGraph(
+  user: string,
+  args: { maxDepth: number; maxItems: number },
+  runtime: RuntimeOptions,
+): Promise<ReplyGraph> {
+  const cdxLimiter = new AsyncLimiter(runtime.cdxConcurrency);
+  console.error(
+    `Building reply graph for ${user} (depth=${args.maxDepth}, max-items=${args.maxItems > 0 ? args.maxItems : "unlimited"})`,
+  );
+  const graph = await buildReplyGraph({
+    seed: user,
+    maxDepth: args.maxDepth,
+    maxItems: args.maxItems > 0 ? args.maxItems : undefined,
+    concurrency: runtime.concurrency,
+    fetchCdx: (u) => cdxLimiter.run(() => getCdxList(u, runtime)),
+    fetchPost: (_u, item) => getOnePage(item, runtime),
+    onUserStart: (u, depth, total, selected, remaining) => {
+      const budget = remaining === undefined ? "" : `, ${remaining} budget items left`;
+      console.error(`[depth=${depth}] ${u}: inspecting ${selected}/${total} cdx items${budget}`);
+    },
+    onError: (u, err) => console.error(`error for ${u}: ${err}`),
   });
+  console.error(`Graph: ${Object.keys(graph.nodes).length} nodes, ${graph.edges.length} edges`);
+  return graph;
+}
 
-program.parse();
+function resolveTimeRange(args: CircleArgs): TimeRange {
+  if (args.year !== undefined) return rangeForYear(args.year);
+  const range: TimeRange = {};
+  if (args.from) {
+    const d = new Date(args.from);
+    if (Number.isNaN(d.getTime())) throw new Error(`invalid --from date: ${args.from}`);
+    range.from = d;
+  }
+  if (args.to) {
+    const d = new Date(args.to);
+    if (Number.isNaN(d.getTime())) throw new Error(`invalid --to date: ${args.to}`);
+    range.to = d;
+  }
+  return range;
+}
+
+function rangeHasBound(range: TimeRange): boolean {
+  return range.from !== undefined || range.to !== undefined;
+}
+
+const handlers: CliHandlers = {
+  solve: async ({ user }: SolveArgs, runtime: RuntimeOptions) => {
+    await solve(user, runtime);
+  },
+  match: runMatch,
+  graph: runGraph,
+  circle: runCircle,
+};
+
+const pkg = require("../package.json") as { version?: string };
+
+buildProgram(handlers, pkg.version ?? "0.0.0")
+  .parseAsync()
+  .catch((err) => {
+    console.error(err);
+    exit(1);
+  });

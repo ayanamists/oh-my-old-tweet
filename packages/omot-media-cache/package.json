@@ -1,0 +1,15 @@
+{
+  "name": "omot-media-cache",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "omot-media-cache": "src/cli.js"
+  },
+  "scripts": {
+    "prefetch": "node src/cli.js prefetch",
+    "pull-edge": "node src/cli.js pull-edge",
+    "start": "node src/cli.js serve",
+    "test": "node --test"
+  }
+}

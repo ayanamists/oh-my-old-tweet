@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect } from 'vitest';
-import { getDefaultConfig, getUrl, defaultConfig } from '../../src/corsUrl';
+import { buildMediaCacheUrl, getDefaultConfig, getUrl, defaultConfig } from '../../src/corsUrl';
 
 afterEach(() => {
   localStorage.clear();
@@ -48,5 +48,31 @@ describe('getDefaultConfig', () => {
   it('keeps an API key saved through settings', () => {
     localStorage.setItem('omot-cors-config', JSON.stringify({ ...defaultConfig, apiKey: 'savedsecret' }));
     expect(getDefaultConfig().apiKey).toBe('savedsecret');
+  });
+
+  it('uses media cache config from the URL query at runtime', () => {
+    window.history.replaceState({}, '', '/?media=https%3A%2F%2Fmedia.example.com&mediakey=secret');
+    expect(getDefaultConfig().mediaCacheUrl).toBe('https://media.example.com');
+    expect(getDefaultConfig().mediaCacheKey).toBe('secret');
+  });
+});
+
+describe('buildMediaCacheUrl', () => {
+  it('returns the original URL when media cache is not configured', () => {
+    const target = 'https://web.archive.org/web/1im_/https://pbs.twimg.com/media/a.jpg';
+    expect(buildMediaCacheUrl(defaultConfig, target)).toBe(target);
+  });
+
+  it('builds a keyed media-cache URL', () => {
+    const target = 'https://web.archive.org/web/1im_/https://pbs.twimg.com/media/a.jpg';
+    const url = new URL(buildMediaCacheUrl({
+      ...defaultConfig,
+      mediaCacheUrl: 'https://media.example.com/',
+      mediaCacheKey: 'secret',
+    }, target));
+
+    expect(url.origin + url.pathname).toBe('https://media.example.com/media');
+    expect(url.searchParams.get('url')).toBe(target);
+    expect(url.searchParams.get('key')).toBe('secret');
   });
 });

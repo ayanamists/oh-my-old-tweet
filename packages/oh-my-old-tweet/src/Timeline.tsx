@@ -13,6 +13,7 @@ import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { buildMediaCacheUrl } from "./corsUrl";
 
 const PAGE_SIZE = 30;
 
@@ -105,10 +106,11 @@ interface UserProfileCardProps {
 }
 
 function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNext }: UserProfileCardProps) {
+  const { config } = useContext(ConfigContext);
   if (!profile) return null;
 
   const info      = profile.profileInfo;
-  const avatarUrl = info?.bigAvatar || profile.avatar;
+  const avatarUrl = buildMediaCacheUrl(config, info?.bigAvatar || profile.avatar);
 
   return (
     <div className="min-w-0 space-y-3 overflow-hidden rounded-lg border bg-card p-4 shadow-sm sm:p-5">

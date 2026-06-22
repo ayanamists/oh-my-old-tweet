@@ -58,6 +58,8 @@ function SettingsPanel() {
   const [prefix, setPrefix] = React.useState(cfg.prefix);
   const [edgeUrl, setEdgeUrl] = React.useState(cfg.edgeUrl ?? '');
   const [apiKey, setApiKey] = React.useState(cfg.apiKey ?? '');
+  const [mediaCacheUrl, setMediaCacheUrl] = React.useState(cfg.mediaCacheUrl ?? '');
+  const [mediaCacheKey, setMediaCacheKey] = React.useState(cfg.mediaCacheKey ?? '');
 
   const save = React.useCallback(
     (patch: Partial<CorsProxyConfig>) => {
@@ -332,6 +334,35 @@ function SettingsPanel() {
                   placeholder="Leave blank if no key is set"
                 />
                 <Button size="sm" className="w-full sm:w-auto" onClick={() => save({ apiKey: apiKey || undefined })}>Save</Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="media-cache-url">Media Cache URL</Label>
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                <Input
+                  id="media-cache-url"
+                  className="min-w-0"
+                  value={mediaCacheUrl}
+                  onChange={e => setMediaCacheUrl(e.target.value)}
+                  placeholder="https://media.example.com"
+                />
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => save({ mediaCacheUrl: mediaCacheUrl || undefined })}>Save</Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="media-cache-key">Media Cache Key</Label>
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                <Input
+                  id="media-cache-key"
+                  className="min-w-0"
+                  type="password"
+                  value={mediaCacheKey}
+                  onChange={e => setMediaCacheKey(e.target.value)}
+                  placeholder="Leave blank if no key is set"
+                />
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => save({ mediaCacheKey: mediaCacheKey || undefined })}>Save</Button>
               </div>
             </div>
           </section>

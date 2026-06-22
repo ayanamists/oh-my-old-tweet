@@ -1,5 +1,8 @@
+import { useContext } from "react";
 import TweetCard from "react-tweet-card";
 import { Post } from "twitter-data-parser";
+import { ConfigContext } from "./context/ConfigContext";
+import { buildMediaCacheUrl } from "./corsUrl";
 
 interface TCardProps {
   p: Post;
@@ -12,6 +15,7 @@ function getInternalUserHref(username: string) {
 }
 
 export function TCard({ p, shareLink, linkUsersInternally = true }: TCardProps) {
+  const { config } = useContext(ConfigContext);
   const name    = p.user.fullName ?? "";
   const username = p.user.userName ?? "";
   const text    = p.text ?? "";
@@ -29,13 +33,13 @@ export function TCard({ p, shareLink, linkUsersInternally = true }: TCardProps) 
       author={{
         name,
         username,
-        image: p.user.avatar ?? "",
+        image: buildMediaCacheUrl(config, p.user.avatar),
       }}
       tweet={textAll}
       time={p.date}
       theme={theme}
       source="Twitter for iPhone"
-      tweetImages={p.images.length === 0 ? undefined : p.images.map(i => ({ src: i }))}
+      tweetImages={p.images.length === 0 ? undefined : p.images.map(i => ({ src: buildMediaCacheUrl(config, i) }))}
       permalink={p.tweetUrl}
       archiveLink={p.archiveUrl}
       shareLink={shareLink}

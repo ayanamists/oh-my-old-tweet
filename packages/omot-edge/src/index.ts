@@ -59,6 +59,11 @@ export default {
         return await handleReindex(request, env);
       }
 
+      if (url.pathname === '/admin/media-urls') {
+        const { handleMediaUrls } = await import('./handlers/mediaUrls');
+        return await handleMediaUrls(request, env);
+      }
+
       return new Response('Not Found', { status: 404 });
     } catch (err) {
       if (
@@ -66,6 +71,7 @@ export default {
         || url.pathname === '/search'
         || url.pathname === '/cdx'
         || url.pathname === '/admin/reindex'
+        || url.pathname === '/admin/media-urls'
       ) {
         return corsError(500, err);
       }

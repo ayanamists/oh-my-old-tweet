@@ -11,6 +11,8 @@ const CORS_HEADERS = {
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
+const DEFAULT_CONCURRENCY = 8;
+const MAX_CONCURRENCY = 20;
 const DEFAULT_PREFIX = 'snapshot/';
 const SNAPSHOT_KEY_RE = /^snapshot\/v(\d+)\/(.+)\.json$/;
 const TWITTER_STATUS_RE = /(?:https?:\/\/)?(?:mobile\.)?(?:twitter|x)\.com\/([^/?#]+)\/status\/(\d+)/i;
@@ -44,9 +46,17 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function parseLimit(raw: string | null): number {
+  return parseBoundedPositiveInt(raw, DEFAULT_LIMIT, MAX_LIMIT);
+}
+
+function parseConcurrency(raw: string | null): number {
+  return parseBoundedPositiveInt(raw, DEFAULT_CONCURRENCY, MAX_CONCURRENCY);
+}
+
+function parseBoundedPositiveInt(raw: string | null, fallback: number, max: number): number {
   const value = Number.parseInt(raw ?? '', 10);
-  if (!Number.isFinite(value) || value <= 0) return DEFAULT_LIMIT;
-  return Math.min(value, MAX_LIMIT);
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return Math.min(value, max);
 }
 
 function wantsWrite(url: URL): boolean {
@@ -126,8 +136,9 @@ function parseCdxRows(body: string): CdxRow[] {
   });
 }
 
-async function getCachedCdxRows(env: Env, username: string): Promise<CdxRow[]> {
-  const keys = [cdxCacheKey(username), `cdx/v1/${username.toLowerCase()}.json`];
+async function loadCachedCdxRows(env: Env, username: string): Promise<CdxRow[]> {
+  const normalized = username.toLowerCase();
+  const keys = [cdxCacheKey(normalized), `cdx/v1/${normalized}.json`];
   for (const key of keys) {
     const obj = await env.OMOT_CACHE.get(key);
     if (!obj) continue;
@@ -138,6 +149,20 @@ async function getCachedCdxRows(env: Env, username: string): Promise<CdxRow[]> {
     }
   }
   return [];
+}
+
+function getCachedCdxRows(
+  env: Env,
+  username: string,
+  cache: Map<string, Promise<CdxRow[]>>,
+): Promise<CdxRow[]> {
+  const normalized = username.toLowerCase();
+  let rows = cache.get(normalized);
+  if (!rows) {
+    rows = loadCachedCdxRows(env, normalized);
+    cache.set(normalized, rows);
+  }
+  return rows;
 }
 
 function isJsonSnapshot(mimetype: string): boolean {
@@ -154,12 +179,13 @@ async function canonicalizeArchiveUrl(
   archiveUrl: string,
   post: Post,
   stats: ReindexStats,
+  cdxRowsByUser: Map<string, Promise<CdxRow[]>>,
 ): Promise<string> {
   const parts = getStatusParts(post, archiveUrl);
   const ts = archiveTimestamp(archiveUrl);
   if (!parts || !ts) return archiveUrl;
 
-  const rows = await getCachedCdxRows(env, parts.username);
+  const rows = await getCachedCdxRows(env, parts.username, cdxRowsByUser);
   const match = rows.find((row) => (
     row.timestamp === ts
     && row.original.toLowerCase().includes(`/status/${parts.id}`)
@@ -184,6 +210,78 @@ async function loadCachedPost(obj: R2ObjectBody): Promise<Post | null> {
   return post;
 }
 
+interface PreparedPost {
+  archiveUrl: string;
+  parserVersion?: string;
+  post: Post;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    for (;;) {
+      const index = next;
+      next += 1;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function prepareObject(
+  env: Env,
+  key: string,
+  stats: ReindexStats,
+  cdxRowsByUser: Map<string, Promise<CdxRow[]>>,
+): Promise<PreparedPost | null> {
+  try {
+    const body = await env.OMOT_CACHE.get(key);
+    if (!body) {
+      stats.skippedMissingObject += 1;
+      return null;
+    }
+    stats.loaded += 1;
+
+    let post: Post | null;
+    try {
+      post = await loadCachedPost(body);
+    } catch {
+      stats.skippedInvalidJson += 1;
+      return null;
+    }
+    if (!post) {
+      stats.skippedNullPost += 1;
+      return null;
+    }
+    stats.parsed += 1;
+
+    const archiveUrl = archiveUrlFromSnapshotKey(key) ?? getPostArchiveUrl(post);
+    if (!archiveUrl) {
+      stats.skippedInvalidArchiveUrl += 1;
+      return null;
+    }
+
+    return {
+      archiveUrl: await canonicalizeArchiveUrl(env, archiveUrl, post, stats, cdxRowsByUser),
+      parserVersion: snapshotVersionFromKey(key),
+      post,
+    };
+  } catch (err) {
+    stats.errors.push({
+      key,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
 export async function handleReindex(request: Request, env: Env): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -197,6 +295,7 @@ export async function handleReindex(request: Request, env: Env): Promise<Respons
 
   const url = new URL(request.url);
   const limit = parseLimit(url.searchParams.get('limit'));
+  const concurrency = parseConcurrency(url.searchParams.get('concurrency'));
   const prefix = url.searchParams.get('prefix') || DEFAULT_PREFIX;
   const cursor = url.searchParams.get('cursor') || undefined;
   const write = wantsWrite(url);
@@ -216,44 +315,18 @@ export async function handleReindex(request: Request, env: Env): Promise<Respons
     errors: [],
   };
 
-  for (const object of listed.objects) {
-    try {
-      const body = await env.OMOT_CACHE.get(object.key);
-      if (!body) {
-        stats.skippedMissingObject += 1;
-        continue;
-      }
-      stats.loaded += 1;
+  const cdxRowsByUser = new Map<string, Promise<CdxRow[]>>();
+  const prepared = await mapWithConcurrency(
+    listed.objects,
+    concurrency,
+    (object) => prepareObject(env, object.key, stats, cdxRowsByUser),
+  );
 
-      let post: Post | null;
-      try {
-        post = await loadCachedPost(body);
-      } catch {
-        stats.skippedInvalidJson += 1;
-        continue;
-      }
-      if (!post) {
-        stats.skippedNullPost += 1;
-        continue;
-      }
-      stats.parsed += 1;
-
-      const archiveUrl = archiveUrlFromSnapshotKey(object.key) ?? getPostArchiveUrl(post);
-      if (!archiveUrl) {
-        stats.skippedInvalidArchiveUrl += 1;
-        continue;
-      }
-
-      const canonicalArchiveUrl = await canonicalizeArchiveUrl(env, archiveUrl, post, stats);
-      if (write) {
-        await upsertTweet(env, canonicalArchiveUrl, post, snapshotVersionFromKey(object.key));
-        stats.indexed += 1;
-      }
-    } catch (err) {
-      stats.errors.push({
-        key: object.key,
-        error: err instanceof Error ? err.message : String(err),
-      });
+  if (write) {
+    for (const item of prepared) {
+      if (!item) continue;
+      await upsertTweet(env, item.archiveUrl, item.post, item.parserVersion);
+      stats.indexed += 1;
     }
   }
 
@@ -261,6 +334,7 @@ export async function handleReindex(request: Request, env: Env): Promise<Respons
     write,
     prefix,
     limit,
+    concurrency,
     cursor: cursor ?? '',
     nextCursor: listed.truncated ? listed.cursor ?? '' : '',
     done: !listed.truncated,

@@ -11,6 +11,7 @@ import { Label } from '../components/ui/label';
 import { Alert, AlertDescription } from '../components/ui/alert';
 
 const MainLayout = dynamic(() => import('../src/Layout/MainLayout'), { ssr: false });
+const SEARCH_LIMIT = 500;
 
 interface SearchResult {
   id: string;
@@ -29,7 +30,7 @@ async function fetchSearch(edgeUrl: string, q: string, user: string, apiKey?: st
   const url = new URL(`${edgeUrl.replace(/\/$/, '')}/search`);
   if (q)    url.searchParams.set('q', q);
   if (user) url.searchParams.set('user', user);
-  url.searchParams.set('limit', '50');
+  url.searchParams.set('limit', String(SEARCH_LIMIT));
 
   const headers: HeadersInit = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
   const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10_000), headers });
@@ -66,7 +67,7 @@ function ResultsList({ results, searched }: { results: SearchResult[]; searched:
   return (
     <div className="min-w-0 space-y-1">
       <p className="text-xs text-muted-foreground mb-3">
-        {results.length} result{results.length !== 1 ? 's' : ''}{results.length === 50 ? ' (limit reached)' : ''}
+        {results.length} result{results.length !== 1 ? 's' : ''}{results.length === SEARCH_LIMIT ? ' (limit reached)' : ''}
       </p>
       <div className="divide-y overflow-hidden rounded-lg border bg-card shadow-sm">
         {results.map((r, i) => {

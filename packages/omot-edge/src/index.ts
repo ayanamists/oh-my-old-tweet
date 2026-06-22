@@ -54,9 +54,19 @@ export default {
         return await handleCdx(request, env, ctx);
       }
 
+      if (url.pathname === '/admin/reindex') {
+        const { handleReindex } = await import('./handlers/reindex');
+        return await handleReindex(request, env);
+      }
+
       return new Response('Not Found', { status: 404 });
     } catch (err) {
-      if (url.pathname === '/snapshot' || url.pathname === '/search' || url.pathname === '/cdx') {
+      if (
+        url.pathname === '/snapshot'
+        || url.pathname === '/search'
+        || url.pathname === '/cdx'
+        || url.pathname === '/admin/reindex'
+      ) {
         return corsError(500, err);
       }
       throw err;

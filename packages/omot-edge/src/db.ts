@@ -24,7 +24,12 @@ function parsePostTimestamp(post: Post): number {
   return Number.isFinite(millis) ? Math.floor(millis / 1000) : 0;
 }
 
-export async function upsertTweet(env: Env, archiveUrl: string, post: Post): Promise<void> {
+export async function upsertTweet(
+  env: Env,
+  archiveUrl: string,
+  post: Post,
+  parserVersion = env.PARSER_VERSION,
+): Promise<void> {
   if (!env.OMOT_DB) return;
 
   const snapshotTs = parseArchiveTimestamp(archiveUrl) ?? parsePostTimestamp(post);
@@ -41,7 +46,7 @@ export async function upsertTweet(env: Env, archiveUrl: string, post: Post): Pro
     archiveUrl,
     post.text ?? '',
     (post.images && post.images.length > 0) ? 1 : 0,
-    Number(env.PARSER_VERSION ?? 1),
+    Number(parserVersion ?? 1),
   ).run();
 }
 

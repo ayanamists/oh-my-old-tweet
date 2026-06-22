@@ -81,6 +81,24 @@ describe('upsertTweet', () => {
     );
   });
 
+  it('can index with an explicit parser version', async () => {
+    const archiveUrl = 'https://web.archive.org/web/20220111094401/https://twitter.com/jack/status/1';
+    const { db, stmt } = makeD1WithStmt();
+
+    await upsertTweet(makeEnv(db), archiveUrl, fakePost, '3');
+
+    expect(stmt.bind).toHaveBeenCalledWith(
+      '1',
+      'jack',
+      '12',
+      Math.floor(Date.UTC(2022, 0, 11, 9, 44, 1) / 1000),
+      archiveUrl,
+      'hello',
+      0,
+      3,
+    );
+  });
+
   it('is a no-op when OMOT_DB is not configured', async () => {
     // Should not throw
     await expect(upsertTweet(makeEnv(), 'url', fakePost)).resolves.toBeUndefined();

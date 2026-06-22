@@ -12,6 +12,7 @@ const UserDetails = ({
   name,
   username,
   image,
+  fallbackImage,
   isVerified,
   isGovernment,
   isBusiness,
@@ -43,7 +44,7 @@ const UserDetails = ({
         .filter(Boolean)
         .join('. ')}
     >
-      <ProfilePicture {...{ image, clickableProfileLink }} />
+      <ProfilePicture {...{ image, fallbackImage, clickableProfileLink }} />
       <Name
         {...{
           name,

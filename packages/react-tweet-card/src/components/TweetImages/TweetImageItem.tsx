@@ -1,4 +1,6 @@
-import React, { MutableRefObject, useCallback, useState } from 'react';
+import React, {
+  MutableRefObject, useCallback, useEffect, useState,
+} from 'react';
 import className from 'utils/className';
 import globalClassName from 'utils/globalClassName';
 import { Item } from 'react-photoswipe-gallery';
@@ -12,15 +14,17 @@ type ImageInfo = {
 
 type TweetImageItemProps = {
   url: string,
+  fallbackUrl?: string,
   imgInfo?: ImageInfo
 }
 
 type TweetImageItemInternalProps = {
   url: string,
+  onError: () => void,
   imgInfo: ImageInfo
 }
 
-function TweetImageItemInternal({ url, imgInfo }: TweetImageItemInternalProps) {
+function TweetImageItemInternal({ url, onError, imgInfo }: TweetImageItemInternalProps) {
   const { width, height } = imgInfo;
   return (
     <div
@@ -42,6 +46,7 @@ function TweetImageItemInternal({ url, imgInfo }: TweetImageItemInternalProps) {
             <img
               ref={ref as MutableRefObject<HTMLImageElement>}
               onClick={open}
+              onError={onError}
               src={url}
               style={{ height: '100%', width: '100%' }}
             />
@@ -52,7 +57,7 @@ function TweetImageItemInternal({ url, imgInfo }: TweetImageItemInternalProps) {
   );
 }
 
-function ClientTweetImageItem({ url }: { url: string }) {
+function ClientTweetImageItem({ url, onError }: { url: string, onError: () => void }) {
   const [loaded, setLoaded] = useState(false);
   const [width2, setWidth] = useState(0);
   const [height2, setHeight] = useState(0);
@@ -67,21 +72,37 @@ function ClientTweetImageItem({ url }: { url: string }) {
 
   if (!loaded) {
     // eslint-disable-next-line jsx-a11y/alt-text
-    return <img className="notLoaded" src={url} onLoad={onLoad} style={{ opacity: 0 }} />;
+    return <img className="notLoaded" src={url} onLoad={onLoad} onError={onError} style={{ opacity: 0 }} />;
   }
   return (
     <TweetImageItemInternal
       url={url}
+      onError={onError}
       imgInfo={
     { width: width2, height: height2 }
   } />
   );
 }
 
-export default function TweetImageItem({ url, imgInfo }: TweetImageItemProps) {
+export default function TweetImageItem({ url, fallbackUrl, imgInfo }: TweetImageItemProps) {
+  const [activeUrl, setActiveUrl] = useState(url);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  useEffect(() => {
+    setActiveUrl(url);
+    setUsingFallback(false);
+  }, [url, fallbackUrl]);
+
+  const handleError = useCallback(() => {
+    if (!usingFallback && fallbackUrl && fallbackUrl !== activeUrl) {
+      setActiveUrl(fallbackUrl);
+      setUsingFallback(true);
+    }
+  }, [activeUrl, fallbackUrl, usingFallback]);
+
   if (imgInfo) {
     const [width, height] = fullFillImage(imgInfo.width, imgInfo.height);
-    return <TweetImageItemInternal url={url} imgInfo={{ width, height }} />;
+    return <TweetImageItemInternal url={activeUrl} onError={handleError} imgInfo={{ width, height }} />;
   }
-  return <ClientTweetImageItem url={url} />;
+  return <ClientTweetImageItem url={activeUrl} onError={handleError} />;
 }

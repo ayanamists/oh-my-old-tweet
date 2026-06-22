@@ -21,6 +21,14 @@
   z-index: 2;
 }
 
+.profilePictureProbe {
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 0;
+}
+
 .fallbackPicture {
   background-image: url(https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png);
 }

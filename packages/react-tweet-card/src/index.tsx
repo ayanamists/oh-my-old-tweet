@@ -16,6 +16,7 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
     name: string;
     username: string;
     image: string;
+    fallbackImage?: string;
     isVerified?: boolean;
     isProtected?: boolean;
     isBusiness?: boolean;
@@ -29,6 +30,7 @@ export type TweetCardProps = React.HTMLAttributes<HTMLDivElement> & {
   tweet: string;
   tweetImages?: {
     src: string;
+    fallbackSrc?: string;
     isVideoThumbnail?: boolean;
     width?: number;
     height?: number;

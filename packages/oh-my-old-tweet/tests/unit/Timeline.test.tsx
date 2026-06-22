@@ -9,6 +9,7 @@ import { ConfigContext } from '../../src/context/ConfigContext';
 import { FilterContext } from '../../src/context/FilterContext';
 import type { TweetFilter } from '../../src/context/FilterContext';
 import { defaultConfig } from '../../src/corsUrl';
+import type { CorsProxyConfig } from '../../src/corsUrl';
 
 // State shared between vi.mock factories and the test bodies. vi.hoisted is
 // the supported way to do this — plain top-level `let` would be hoisted AFTER
@@ -68,15 +69,23 @@ function makeCdxItem(id: string, dateIso: string) {
   return { id, original: `https://twitter.com/foo/status/${id}`, date: new Date(dateIso) };
 }
 
-function makePost(id: string, opts: { user?: string; isReply?: boolean; bio?: string } = {}): Post {
+function makePost(id: string, opts: {
+  user?: string;
+  isReply?: boolean;
+  bio?: string;
+  avatar?: string;
+  bigAvatar?: string;
+} = {}): Post {
   const userName = opts.user ?? 'foo';
   return {
     id,
     user: {
       userName,
       fullName: userName,
-      avatar: '',
-      ...(opts.bio !== undefined ? { profileInfo: { text: opts.bio } } : {}),
+      avatar: opts.avatar ?? '',
+      ...((opts.bio !== undefined || opts.bigAvatar !== undefined)
+        ? { profileInfo: { text: opts.bio, bigAvatar: opts.bigAvatar } }
+        : {}),
     },
     text: `tweet ${id}`,
     date: new Date('2020-06-01'),
@@ -112,10 +121,11 @@ function makeTestQueryClient() {
   });
 }
 
-function Wrap({ filter, children, client }: {
+function Wrap({ filter, children, client, config = defaultConfig }: {
   filter: TweetFilter;
   children: React.ReactNode;
   client?: QueryClient;
+  config?: CorsProxyConfig;
 }) {
   // Lazy useState so a Wrap kept across `rerender()` calls preserves its
   // QueryClient — tests that simulate navigation (rerender with new user
@@ -124,7 +134,7 @@ function Wrap({ filter, children, client }: {
   const [qc] = React.useState(() => client ?? makeTestQueryClient());
   return (
     <QueryClientProvider client={qc}>
-      <ConfigContext.Provider value={{ config: defaultConfig, setConfig: vi.fn() }}>
+      <ConfigContext.Provider value={{ config, setConfig: vi.fn() }}>
         <FilterContext.Provider value={{ tweetFilter: filter, setTweetFilter: vi.fn() }}>
           <MemoryRouter>{children}</MemoryRouter>
         </FilterContext.Provider>
@@ -246,6 +256,39 @@ describe('Timeline — subtle filter/scroll behaviour', () => {
       expect(screen.queryAllByTestId('tcard')).toHaveLength(1);
       expect(screen.queryByText('Mixed case profile')).not.toBeNull();
     });
+  });
+
+  it('falls back from media-cache profile avatars to the original archive URL', async () => {
+    const originalAvatar = 'https://web.archive.org/web/1im_/https://pbs.twimg.com/profile/a.jpg';
+    const items = [makeCdxItem('p1', '2020-06-01')];
+    mockPostMap.set('p1', makePost('p1', {
+      user: 'alice',
+      bio: 'Alice bio',
+      bigAvatar: originalAvatar,
+    }));
+    mockCdxList.fn.mockResolvedValue(items);
+
+    const { Timeline } = await import('../../src/Timeline');
+
+    render(
+      <Wrap
+        filter={baseFilter}
+        config={{
+          ...defaultConfig,
+          mediaCacheUrl: 'https://media.example.com',
+          mediaCacheKey: 'secret',
+        }}
+      >
+        <Timeline user="alice" />
+      </Wrap>,
+    );
+
+    const avatar = await screen.findByAltText('alice') as HTMLImageElement;
+    expect(avatar.src).toContain('https://media.example.com/media?');
+
+    fireEvent.error(avatar);
+
+    await waitFor(() => expect(avatar.src).toBe(originalAvatar));
   });
 
   it('can reverse timeline order by archive capture date', async () => {

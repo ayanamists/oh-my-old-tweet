@@ -53,13 +53,13 @@ const TweetImages = ({ tweetImages = [] }: TweetImagesProps) => {
             if (index === 0 && count === 3) {
               return (
                 <div style={{ gridRow: '1 / span 2' }} key={i.src}>
-                  <TweetImageItem url={i.src} imgInfo={imgInfo} />
+                  <TweetImageItem url={i.src} fallbackUrl={i.fallbackSrc} imgInfo={imgInfo} />
                 </div>
               );
             }
             return (
               <div key={i.src}>
-                <TweetImageItem url={i.src} imgInfo={imgInfo} />
+                <TweetImageItem url={i.src} fallbackUrl={i.fallbackSrc} imgInfo={imgInfo} />
               </div>
             );
           })}

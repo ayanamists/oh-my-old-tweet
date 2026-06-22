@@ -34,12 +34,16 @@ export function TCard({ p, shareLink, linkUsersInternally = true }: TCardProps) 
         name,
         username,
         image: buildMediaCacheUrl(config, p.user.avatar),
+        fallbackImage: p.user.avatar ?? "",
       }}
       tweet={textAll}
       time={p.date}
       theme={theme}
       source="Twitter for iPhone"
-      tweetImages={p.images.length === 0 ? undefined : p.images.map(i => ({ src: buildMediaCacheUrl(config, i) }))}
+      tweetImages={p.images.length === 0 ? undefined : p.images.map(i => ({
+        src: buildMediaCacheUrl(config, i),
+        fallbackSrc: i,
+      }))}
       permalink={p.tweetUrl}
       archiveLink={p.archiveUrl}
       shareLink={shareLink}

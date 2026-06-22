@@ -107,10 +107,17 @@ interface UserProfileCardProps {
 
 function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNext }: UserProfileCardProps) {
   const { config } = useContext(ConfigContext);
+  const sourceAvatarUrl = profile?.profileInfo?.bigAvatar || profile?.avatar;
+  const mediaAvatarUrl = buildMediaCacheUrl(config, sourceAvatarUrl);
+  const [avatarUrl, setAvatarUrl] = useState(mediaAvatarUrl);
+
+  useEffect(() => {
+    setAvatarUrl(mediaAvatarUrl);
+  }, [mediaAvatarUrl]);
+
   if (!profile) return null;
 
   const info      = profile.profileInfo;
-  const avatarUrl = buildMediaCacheUrl(config, info?.bigAvatar || profile.avatar);
 
   return (
     <div className="min-w-0 space-y-3 overflow-hidden rounded-lg border bg-card p-4 shadow-sm sm:p-5">
@@ -120,6 +127,9 @@ function UserProfileCard({ profile, profileDate, onPrev, onNext, hasPrev, hasNex
           <img
             src={avatarUrl}
             alt={profile.fullName}
+            onError={() => {
+              if (sourceAvatarUrl && avatarUrl !== sourceAvatarUrl) setAvatarUrl(sourceAvatarUrl);
+            }}
             className="h-14 w-14 shrink-0 rounded-full border object-cover"
           />
         ) : (

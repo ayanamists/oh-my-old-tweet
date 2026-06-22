@@ -1,12 +1,33 @@
 import type { Env } from './types';
 import type { Post } from 'twitter-data-parser';
 
+function parseArchiveTimestamp(archiveUrl: string): number | undefined {
+  const match = archiveUrl.match(/\/web\/(\d{4,14})(?:[a-z]+_)?\//);
+  if (!match) return undefined;
+
+  const timestamp = match[1].padEnd(14, '0');
+  const year = Number(timestamp.slice(0, 4));
+  const month = Number(timestamp.slice(4, 6));
+  const day = Number(timestamp.slice(6, 8));
+  const hour = Number(timestamp.slice(8, 10));
+  const minute = Number(timestamp.slice(10, 12));
+  const second = Number(timestamp.slice(12, 14));
+
+  const millis = Date.UTC(year, month - 1, day, hour, minute, second);
+  return Number.isFinite(millis) ? Math.floor(millis / 1000) : undefined;
+}
+
+function parsePostTimestamp(post: Post): number {
+  const millis = post.date instanceof Date
+    ? post.date.getTime()
+    : new Date(post.date as unknown as string).getTime();
+  return Number.isFinite(millis) ? Math.floor(millis / 1000) : 0;
+}
+
 export async function upsertTweet(env: Env, archiveUrl: string, post: Post): Promise<void> {
   if (!env.OMOT_DB) return;
 
-  const snapshotTs = Math.floor(post.date instanceof Date
-    ? post.date.getTime() / 1000
-    : new Date(post.date as unknown as string).getTime() / 1000);
+  const snapshotTs = parseArchiveTimestamp(archiveUrl) ?? parsePostTimestamp(post);
 
   await env.OMOT_DB.prepare(`
     INSERT OR REPLACE INTO tweets
@@ -15,7 +36,7 @@ export async function upsertTweet(env: Env, archiveUrl: string, post: Post): Pro
   `).bind(
     post.id,
     post.user?.userName?.toLowerCase() ?? '',
-    post.user?.userId ?? null,
+    post.user?.id ?? null,
     snapshotTs,
     archiveUrl,
     post.text ?? '',

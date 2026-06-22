@@ -35,10 +35,19 @@ function makeR2(initial: Record<string, string> = {}): R2Bucket {
   } as unknown as R2Bucket;
 }
 
-function makeEnv(r2?: R2Bucket): Env {
+function makeD1() {
+  const stmt = {
+    bind: vi.fn().mockReturnThis(),
+    run: vi.fn().mockResolvedValue({}),
+  };
+  const db = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as D1Database;
+  return { db, stmt };
+}
+
+function makeEnv(r2?: R2Bucket, db?: D1Database): Env {
   return {
     OMOT_CACHE: r2 ?? makeR2(),
-    OMOT_DB: null as unknown as D1Database,
+    OMOT_DB: db ?? null as unknown as D1Database,
     PARSER_VERSION: '1',
     ARCHIVE_BASE: 'https://web.archive.org',
   };
@@ -81,6 +90,39 @@ describe('handleSnapshot', () => {
     const body = await res.json() as { post: { text: string } };
     expect(body.post.text).toBe('cached!');
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('indexes cached R2 posts into D1 on cache hit', async () => {
+    const { cacheKey } = await import('../src/cache');
+    const key = cacheKey(ARCHIVE_URL, '1');
+    const cachedPost = {
+      id: '523389174242488320',
+      text: 'cached!',
+      date: '2006-03-21T20:50:14.000Z',
+      user: { userName: 'Jack', fullName: 'Jack', id: '12' },
+      images: [],
+      tweetUrl: 'https://twitter.com/jack/status/523389174242488320',
+      archiveUrl: ARCHIVE_URL,
+    };
+    const r2 = makeR2({ [key]: JSON.stringify({ post: cachedPost }) });
+    const { db, stmt } = makeD1();
+    vi.stubGlobal('fetch', vi.fn());
+
+    const req = new Request('https://edge.example.com/snapshot?url=' + encodeURIComponent(ARCHIVE_URL));
+    const res = await handleSnapshot(req, makeEnv(r2, db), makeCtx());
+
+    expect(res.status).toBe(200);
+    expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO tweets'));
+    expect(stmt.bind).toHaveBeenCalledWith(
+      '523389174242488320',
+      'jack',
+      '12',
+      Math.floor(Date.UTC(2014, 9, 18, 8, 30, 0) / 1000),
+      ARCHIVE_URL,
+      'cached!',
+      0,
+      1,
+    );
   });
 
   it('fetches archive.org on R2 miss, parses, returns MISS header', async () => {

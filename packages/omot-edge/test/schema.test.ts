@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const sql = readFileSync(resolve(__dir, '../migrations/0001_init.sql'), 'utf8');
+const rederiveSnapshotTsSql = readFileSync(
+  resolve(__dir, '../migrations/0002_rederive_snapshot_ts.sql'),
+  'utf8',
+);
 
 describe('0001_init.sql', () => {
   it('creates the tweets table', () => {
@@ -29,5 +33,13 @@ describe('0001_init.sql', () => {
     const creates = sql.match(/CREATE\s+(TABLE|VIRTUAL TABLE|INDEX|TRIGGER)/gi) ?? [];
     const safe    = sql.match(/CREATE\s+(TABLE|VIRTUAL TABLE|INDEX|TRIGGER)\s+IF\s+NOT\s+EXISTS/gi) ?? [];
     expect(safe.length).toBe(creates.length);
+  });
+
+  it('rederives search snapshot timestamps from archive URLs', () => {
+    expect(rederiveSnapshotTsSql).toContain('WITH parsed AS');
+    expect(rederiveSnapshotTsSql).toContain('UPDATE tweets');
+    expect(rederiveSnapshotTsSql).toContain('SET snapshot_ts =');
+    expect(rederiveSnapshotTsSql).toContain('archive_url');
+    expect(rederiveSnapshotTsSql).toContain('derived.capture_ts <> tweets.snapshot_ts');
   });
 });

@@ -49,6 +49,7 @@ describe('parsePostFromUrl', () => {
     expect(post?.id).toBe('1569026912315478016');
     expect(post?.text).toBe('legacy json tweet');
     expect(post?.user.userName).toBe('jk48jb');
+    expect(post?.archiveUrl).toBe(ARCHIVE_IF_URL);
   });
 
   it('parses an if_ archive.org HTML wrapper with legacy JSON in jsonview', async () => {
@@ -62,6 +63,7 @@ describe('parsePostFromUrl', () => {
     expect(post?.id).toBe('1569026912315478016');
     expect(post?.text).toBe('legacy json tweet');
     expect(post?.user.userName).toBe('jk48jb');
+    expect(post?.archiveUrl).toBe(ARCHIVE_IF_URL);
   });
 
   it('returns undefined for an unrecognised archive URL shape', async () => {

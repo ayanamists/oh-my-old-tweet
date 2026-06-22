@@ -12,9 +12,14 @@ function makeStmt(rows: unknown[] = []) {
   return stmt;
 }
 
-function makeD1(rows: unknown[] = []): D1Database {
+function makeD1WithStmt(rows: unknown[] = []) {
   const stmt = makeStmt(rows);
-  return { prepare: vi.fn().mockReturnValue(stmt) } as unknown as D1Database;
+  const db = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as D1Database;
+  return { db, stmt };
+}
+
+function makeD1(rows: unknown[] = []): D1Database {
+  return makeD1WithStmt(rows).db;
 }
 
 function makeEnv(db?: D1Database): Env {
@@ -30,7 +35,7 @@ const fakePost: Post = {
   id: '1',
   text: 'hello',
   date: new Date('2020-01-01T00:00:00Z'),
-  user: { userName: 'jack', fullName: 'Jack', userId: '12' },
+  user: { userName: 'jack', fullName: 'Jack', id: '12' },
   images: [],
 } as unknown as Post;
 
@@ -39,6 +44,41 @@ describe('upsertTweet', () => {
     const db = makeD1();
     await upsertTweet(makeEnv(db), 'https://web.archive.org/web/20200101/...', fakePost);
     expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO tweets'));
+  });
+
+  it('indexes by archive snapshot timestamp and user id', async () => {
+    const archiveUrl = 'https://web.archive.org/web/20220111094401/https://twitter.com/jack/status/1';
+    const { db, stmt } = makeD1WithStmt();
+
+    await upsertTweet(makeEnv(db), archiveUrl, fakePost);
+
+    expect(stmt.bind).toHaveBeenCalledWith(
+      '1',
+      'jack',
+      '12',
+      Math.floor(Date.UTC(2022, 0, 11, 9, 44, 1) / 1000),
+      archiveUrl,
+      'hello',
+      0,
+      1,
+    );
+  });
+
+  it('falls back to post date when the archive URL has no timestamp', async () => {
+    const { db, stmt } = makeD1WithStmt();
+
+    await upsertTweet(makeEnv(db), 'https://example.com/not-an-archive', fakePost);
+
+    expect(stmt.bind).toHaveBeenCalledWith(
+      '1',
+      'jack',
+      '12',
+      Math.floor(new Date('2020-01-01T00:00:00Z').getTime() / 1000),
+      'https://example.com/not-an-archive',
+      'hello',
+      0,
+      1,
+    );
   });
 
   it('is a no-op when OMOT_DB is not configured', async () => {

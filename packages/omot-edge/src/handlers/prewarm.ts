@@ -18,6 +18,15 @@ interface CdxRow {
   id: string;
 }
 
+function isJsonSnapshot(mimetype: string): boolean {
+  return mimetype.toLowerCase().includes('application/json');
+}
+
+function getArchiveUrl(row: CdxRow): string {
+  const mode = isJsonSnapshot(row.mimetype) ? `${row.timestamp}if_` : row.timestamp;
+  return `https://web.archive.org/web/${mode}/${row.original}`;
+}
+
 async function fetchNewSnapshots(env: Env, username: string): Promise<CdxRow[]> {
   const url = new URL(CDX_API);
   url.searchParams.set('url', `twitter.com/${username}/status`);
@@ -37,11 +46,14 @@ async function fetchNewSnapshots(env: Env, username: string): Promise<CdxRow[]> 
 }
 
 async function warmOne(env: Env, row: CdxRow): Promise<void> {
-  const archiveUrl = `https://web.archive.org/web/${row.timestamp}/${row.original}`;
-  const cached = await getCachedPost(env, archiveUrl);
-  if (cached !== undefined) return; // already warm
-
+  const archiveUrl = getArchiveUrl(row);
   try {
+    const cached = await getCachedPost(env, archiveUrl);
+    if (cached !== undefined) {
+      if (cached) await upsertTweet(env, archiveUrl, cached);
+      return;
+    }
+
     const html = await fetchArchiveHtml(archiveUrl);
     const post = await parsePostFromUrl(html, archiveUrl) ?? null;
     await setCachedPost(env, archiveUrl, post);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getOnePage } from '../../src/Data';
+import { getArchivePageUrl, getOnePage } from '../../src/Data';
 import { defaultConfig } from '../../src/corsUrl';
 import type { MinimalCdxInfo } from '../../src/Data';
 
@@ -10,6 +10,13 @@ const cdxItem: MinimalCdxInfo = {
   timestamp: '20141018083000',
   origUrl: 'https://twitter.com/jack/status/523389174242488320',
   mimetype: 'text/html',
+};
+
+const jsonCdxItem: MinimalCdxInfo = {
+  id: '523389174242488320',
+  timestamp: '20141018083000',
+  origUrl: 'https://twitter.com/jack/status/523389174242488320',
+  mimetype: 'application/json',
 };
 
 const fakePost = {
@@ -24,6 +31,15 @@ const configWithEdgeKey = { ...configWithEdge, apiKey: 'mysecret' };
 const configNoEdge      = { ...defaultConfig, edgeUrl: undefined };
 
 describe('getOnePage — edge Worker routing', () => {
+  it('builds if_ archive URLs for JSON snapshots', () => {
+    expect(getArchivePageUrl(jsonCdxItem)).toBe(
+      'https://web.archive.org/web/20141018083000if_/https://twitter.com/jack/status/523389174242488320',
+    );
+    expect(getArchivePageUrl({ ...jsonCdxItem, mimetype: 'application/json; charset=utf-8' })).toBe(
+      'https://web.archive.org/web/20141018083000if_/https://twitter.com/jack/status/523389174242488320',
+    );
+  });
+
   it('uses edge Worker response when it returns 200', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ post: fakePost }), { status: 200 }),
@@ -37,6 +53,23 @@ describe('getOnePage — edge Worker routing', () => {
     // Only the Worker was called — no second fetch to archive.org
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toContain('/snapshot?url=');
+  });
+
+  it('passes if_ JSON snapshot URLs to the edge Worker', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ post: fakePost }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getOnePage(configWithEdge, jsonCdxItem);
+
+    const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl.searchParams.get('url')).toBe(
+      'https://web.archive.org/web/20141018083000if_/https://twitter.com/jack/status/523389174242488320',
+    );
+    expect(result?.archiveUrl).toBe(
+      'https://web.archive.org/web/20141018083000if_/https://twitter.com/jack/status/523389174242488320',
+    );
   });
 
   it('falls through to archive.org when edge Worker returns 5xx', async () => {
@@ -86,6 +119,22 @@ describe('getOnePage — edge Worker routing', () => {
     // fetch was only called for archive.org, not for the Worker
     const calledUrls = fetchMock.mock.calls.map((c: unknown[]) => c[0] as string);
     expect(calledUrls.every((u: string) => !u.includes('/snapshot'))).toBe(true);
+  });
+
+  it('preserves if_ archiveUrl when parsing JSON snapshots without the edge Worker', async () => {
+    const archiveHtml = JSON.stringify({
+      data: { id: '523389174242488320', text: 'direct json', created_at: '2014-10-18T08:30:00.000Z', author_id: 'u1' },
+      includes: { users: [{ id: 'u1', name: 'Jack', username: 'jack' }], media: [] },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(archiveHtml, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getOnePage(configNoEdge, jsonCdxItem);
+
+    expect(result?.text).toBe('direct json');
+    expect(result?.archiveUrl).toBe(
+      'https://web.archive.org/web/20141018083000if_/https://twitter.com/jack/status/523389174242488320',
+    );
   });
 
   it('sends Authorization header when apiKey is configured', async () => {

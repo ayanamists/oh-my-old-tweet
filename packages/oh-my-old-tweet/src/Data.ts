@@ -84,8 +84,12 @@ export interface MinimalCdxInfo {
   origUrl: string;
 };
 
+function isJsonSnapshot(mimetype: string): boolean {
+  return mimetype.toLowerCase().includes('application/json');
+}
+
 export function getArchivePageUrl(cdxItem: MinimalCdxInfo) {
-  if (cdxItem.mimetype === 'application/json') {
+  if (isJsonSnapshot(cdxItem.mimetype)) {
     return `https://web.archive.org/web/${cdxItem.timestamp}if_/${cdxItem.origUrl}`;
   }
   return `https://web.archive.org/web/${cdxItem.timestamp}/${cdxItem.origUrl}`;
@@ -110,11 +114,12 @@ export async function getOnePage(config: CorsProxyConfig, cdxItem: MinimalCdxInf
   // Fast path: edge Worker returns pre-parsed JSON from R2
   if (config.edgeUrl) {
     const edgeResult = await tryEdgeWorker(config.edgeUrl, pageUrl, config.apiKey);
-    if (edgeResult !== undefined) return edgeResult;
+    if (edgeResult !== undefined) return { ...edgeResult, archiveUrl: pageUrl };
   }
 
   // Fallback: direct archive.org fetch + parse (Worker or main thread)
   const html = await fetchWithFallbacks(buildProxiedUrls(config, pageUrl))
     .then(res => res.text());
-  return parseMaybeInWorker(html, { id, timestamp: timeStamp, userName: user });
+  const post = await parseMaybeInWorker(html, { id, timestamp: timeStamp, userName: user });
+  return post ? { ...post, archiveUrl: pageUrl } : undefined;
 }

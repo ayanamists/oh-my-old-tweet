@@ -26,8 +26,9 @@ export async function parsePostFromUrl(
   const embeddedJson = doc.querySelector('#jsonview pre')?.textContent;
   if (embeddedJson) {
     const post = parsePost(embeddedJson, meta);
-    if (post) return post;
+    if (post) return { ...post, archiveUrl };
   }
 
-  return parsePost(html, meta);
+  const post = parsePost(html, meta);
+  return post ? { ...post, archiveUrl } : undefined;
 }

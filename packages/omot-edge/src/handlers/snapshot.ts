@@ -36,7 +36,12 @@ export async function handleSnapshot(
   // ── Cache read ──────────────────────────────────────────────────────────────
   const cached = await getCachedPost(env, archiveUrl);
   if (cached !== undefined) {
-    if (cached) ctx.waitUntil(logAccess(env, cached.user?.userName ?? '').catch(() => {}));
+    if (cached) {
+      ctx.waitUntil(Promise.all([
+        upsertTweet(env, archiveUrl, cached),
+        logAccess(env, cached.user?.userName ?? ''),
+      ]).catch(() => {}));
+    }
     return new Response(JSON.stringify({ post: cached }), {
       status: 200,
       headers: {

@@ -19,7 +19,8 @@ derived AS (
       substr(ts, 13, 2)
     ) AS capture_ts
   FROM parsed
-  WHERE ts GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+  WHERE length(ts) = 14
+    AND ts NOT GLOB '*[^0-9]*'
 )
 UPDATE tweets
 SET snapshot_ts = (

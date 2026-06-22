@@ -106,64 +106,75 @@ function archiveTimestamp(archiveUrl: string): string | undefined {
   return match?.[1]?.padEnd(14, '0');
 }
 
-function isHeader(row: unknown[]): boolean {
-  return row[0] === 'timestamp' || row[1] === 'timestamp';
+function parseCdxRow(rowText: string): CdxRow | undefined {
+  const row = JSON.parse(rowText) as unknown;
+  if (!Array.isArray(row)) return undefined;
+
+  const first = String(row[0] ?? '');
+  const second = String(row[1] ?? '');
+  if (/^\d{14}$/.test(first)) {
+    return {
+      timestamp: first,
+      original: String(row[1] ?? ''),
+      mimetype: String(row[2] ?? ''),
+    };
+  }
+  if (/^\d{14}$/.test(second)) {
+    return {
+      timestamp: second,
+      original: String(row[2] ?? ''),
+      mimetype: String(row[3] ?? ''),
+    };
+  }
+  return undefined;
 }
 
-function parseCdxRows(body: string): CdxRow[] {
-  const parsed = JSON.parse(body) as unknown;
-  if (!Array.isArray(parsed)) return [];
+function findCdxRow(body: string, timestamp: string, statusId: string): CdxRow | undefined {
+  const statusNeedle = `/status/${statusId}`;
+  let position = body.indexOf(timestamp);
 
-  const rows = parsed.filter(Array.isArray) as unknown[][];
-  const dataRows = rows.length > 0 && isHeader(rows[0]) ? rows.slice(1) : rows;
-  return dataRows.flatMap((row): CdxRow[] => {
-    const first = String(row[0] ?? '');
-    const second = String(row[1] ?? '');
-    if (/^\d{14}$/.test(first)) {
-      return [{
-        timestamp: first,
-        original: String(row[1] ?? ''),
-        mimetype: String(row[2] ?? ''),
-      }];
+  while (position !== -1) {
+    const rowStart = body.lastIndexOf('[', position);
+    const rowEnd = body.indexOf(']', position);
+    if (rowStart === -1 || rowEnd === -1 || rowEnd <= rowStart) return undefined;
+
+    const rowText = body.slice(rowStart, rowEnd + 1);
+    if (rowText.includes(statusNeedle)) {
+      try {
+        return parseCdxRow(rowText);
+      } catch {
+        return undefined;
+      }
     }
-    if (/^\d{14}$/.test(second)) {
-      return [{
-        timestamp: second,
-        original: String(row[2] ?? ''),
-        mimetype: String(row[3] ?? ''),
-      }];
-    }
-    return [];
-  });
+    position = body.indexOf(timestamp, position + timestamp.length);
+  }
+
+  return undefined;
 }
 
-async function loadCachedCdxRows(env: Env, username: string): Promise<CdxRow[]> {
+async function loadCachedCdxBody(env: Env, username: string): Promise<string | undefined> {
   const normalized = username.toLowerCase();
   const keys = [cdxCacheKey(normalized), `cdx/v1/${normalized}.json`];
   for (const key of keys) {
     const obj = await env.OMOT_CACHE.get(key);
     if (!obj) continue;
-    try {
-      return parseCdxRows(await obj.text());
-    } catch {
-      return [];
-    }
+    return obj.text();
   }
-  return [];
+  return undefined;
 }
 
-function getCachedCdxRows(
+function getCachedCdxBody(
   env: Env,
   username: string,
-  cache: Map<string, Promise<CdxRow[]>>,
-): Promise<CdxRow[]> {
+  cache: Map<string, Promise<string | undefined>>,
+): Promise<string | undefined> {
   const normalized = username.toLowerCase();
-  let rows = cache.get(normalized);
-  if (!rows) {
-    rows = loadCachedCdxRows(env, normalized);
-    cache.set(normalized, rows);
+  let body = cache.get(normalized);
+  if (!body) {
+    body = loadCachedCdxBody(env, normalized);
+    cache.set(normalized, body);
   }
-  return rows;
+  return body;
 }
 
 function isJsonSnapshot(mimetype: string): boolean {
@@ -180,17 +191,14 @@ async function canonicalizeArchiveUrl(
   archiveUrl: string,
   post: Post,
   stats: ReindexStats,
-  cdxRowsByUser: Map<string, Promise<CdxRow[]>>,
+  cdxBodiesByUser: Map<string, Promise<string | undefined>>,
 ): Promise<string> {
   const parts = getStatusParts(post, archiveUrl);
   const ts = archiveTimestamp(archiveUrl);
   if (!parts || !ts) return archiveUrl;
 
-  const rows = await getCachedCdxRows(env, parts.username, cdxRowsByUser);
-  const match = rows.find((row) => (
-    row.timestamp === ts
-    && row.original.toLowerCase().includes(`/status/${parts.id}`)
-  ));
+  const body = await getCachedCdxBody(env, parts.username, cdxBodiesByUser);
+  const match = body ? findCdxRow(body, ts, parts.id) : undefined;
   if (!match) return archiveUrl;
 
   stats.cdxHits += 1;
@@ -240,7 +248,7 @@ async function prepareObject(
   env: Env,
   key: string,
   stats: ReindexStats,
-  cdxRowsByUser: Map<string, Promise<CdxRow[]>>,
+  cdxBodiesByUser: Map<string, Promise<string | undefined>>,
 ): Promise<PreparedPost | null> {
   try {
     const body = await env.OMOT_CACHE.get(key);
@@ -270,7 +278,7 @@ async function prepareObject(
     }
 
     return {
-      archiveUrl: await canonicalizeArchiveUrl(env, archiveUrl, post, stats, cdxRowsByUser),
+      archiveUrl: await canonicalizeArchiveUrl(env, archiveUrl, post, stats, cdxBodiesByUser),
       parserVersion: snapshotVersionFromKey(key),
       post,
     };
@@ -316,11 +324,11 @@ export async function handleReindex(request: Request, env: Env): Promise<Respons
     errors: [],
   };
 
-  const cdxRowsByUser = new Map<string, Promise<CdxRow[]>>();
+  const cdxBodiesByUser = new Map<string, Promise<string | undefined>>();
   const prepared = await mapWithConcurrency(
     listed.objects,
     concurrency,
-    (object) => prepareObject(env, object.key, stats, cdxRowsByUser),
+    (object) => prepareObject(env, object.key, stats, cdxBodiesByUser),
   );
 
   if (write) {

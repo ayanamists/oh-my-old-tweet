@@ -54,7 +54,10 @@ function makeD1() {
     bind: vi.fn().mockReturnThis(),
     run: vi.fn().mockResolvedValue({}),
   };
-  const db = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as D1Database;
+  const db = {
+    prepare: vi.fn().mockReturnValue(stmt),
+    batch: vi.fn().mockResolvedValue([]),
+  } as unknown as D1Database;
   return { db, stmt };
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { upsertTweet, logAccess, topUsernames } from '../src/db';
+import { upsertTweet, upsertTweets, logAccess, topUsernames } from '../src/db';
 import type { Env } from '../src/types';
 import type { Post } from 'twitter-data-parser';
 
@@ -14,7 +14,10 @@ function makeStmt(rows: unknown[] = []) {
 
 function makeD1WithStmt(rows: unknown[] = []) {
   const stmt = makeStmt(rows);
-  const db = { prepare: vi.fn().mockReturnValue(stmt) } as unknown as D1Database;
+  const db = {
+    prepare: vi.fn().mockReturnValue(stmt),
+    batch: vi.fn().mockResolvedValue([]),
+  } as unknown as D1Database;
   return { db, stmt };
 }
 
@@ -102,6 +105,39 @@ describe('upsertTweet', () => {
   it('is a no-op when OMOT_DB is not configured', async () => {
     // Should not throw
     await expect(upsertTweet(makeEnv(), 'url', fakePost)).resolves.toBeUndefined();
+  });
+});
+
+describe('upsertTweets', () => {
+  it('batches prepared upsert statements', async () => {
+    const archiveUrl = 'https://web.archive.org/web/20220111094401/https://twitter.com/jack/status/1';
+    const { db, stmt } = makeD1WithStmt();
+
+    await upsertTweets(makeEnv(db), [
+      { archiveUrl, post: fakePost, parserVersion: '3' },
+    ]);
+
+    expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO tweets'));
+    expect(stmt.bind).toHaveBeenCalledWith(
+      '1',
+      'jack',
+      '12',
+      Math.floor(Date.UTC(2022, 0, 11, 9, 44, 1) / 1000),
+      archiveUrl,
+      'hello',
+      0,
+      3,
+    );
+    expect(db.batch).toHaveBeenCalledWith([stmt]);
+  });
+
+  it('is a no-op for an empty batch', async () => {
+    const { db } = makeD1WithStmt();
+
+    await upsertTweets(makeEnv(db), []);
+
+    expect(db.prepare).not.toHaveBeenCalled();
+    expect(db.batch).not.toHaveBeenCalled();
   });
 });
 

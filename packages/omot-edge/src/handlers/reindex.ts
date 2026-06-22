@@ -1,7 +1,7 @@
 import type { Post } from 'twitter-data-parser';
 import type { Env } from '../types';
 import { cdxCacheKey } from './cdx';
-import { upsertTweet } from '../db';
+import { upsertTweets } from '../db';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +13,7 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
 const DEFAULT_CONCURRENCY = 8;
 const MAX_CONCURRENCY = 20;
+const D1_BATCH_SIZE = 100;
 const DEFAULT_PREFIX = 'snapshot/';
 const SNAPSHOT_KEY_RE = /^snapshot\/v(\d+)\/(.+)\.json$/;
 const TWITTER_STATUS_RE = /(?:https?:\/\/)?(?:mobile\.)?(?:twitter|x)\.com\/([^/?#]+)\/status\/(\d+)/i;
@@ -323,10 +324,11 @@ export async function handleReindex(request: Request, env: Env): Promise<Respons
   );
 
   if (write) {
-    for (const item of prepared) {
-      if (!item) continue;
-      await upsertTweet(env, item.archiveUrl, item.post, item.parserVersion);
-      stats.indexed += 1;
+    const indexable = prepared.filter((item): item is PreparedPost => item !== null);
+    for (let offset = 0; offset < indexable.length; offset += D1_BATCH_SIZE) {
+      const batch = indexable.slice(offset, offset + D1_BATCH_SIZE);
+      await upsertTweets(env, batch);
+      stats.indexed += batch.length;
     }
   }
 

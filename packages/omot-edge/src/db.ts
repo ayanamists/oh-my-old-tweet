@@ -24,21 +24,21 @@ function parsePostTimestamp(post: Post): number {
   return Number.isFinite(millis) ? Math.floor(millis / 1000) : 0;
 }
 
-export async function upsertTweet(
-  env: Env,
+const UPSERT_TWEET_SQL = `
+  INSERT OR REPLACE INTO tweets
+    (id, username, user_id, snapshot_ts, archive_url, text, has_media, parser_version)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+function bindUpsertTweet(
+  db: D1Database,
   archiveUrl: string,
   post: Post,
-  parserVersion = env.PARSER_VERSION,
-): Promise<void> {
-  if (!env.OMOT_DB) return;
-
+  parserVersion: string,
+): D1PreparedStatement {
   const snapshotTs = parseArchiveTimestamp(archiveUrl) ?? parsePostTimestamp(post);
 
-  await env.OMOT_DB.prepare(`
-    INSERT OR REPLACE INTO tweets
-      (id, username, user_id, snapshot_ts, archive_url, text, has_media, parser_version)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(
+  return db.prepare(UPSERT_TWEET_SQL).bind(
     post.id,
     post.user?.userName?.toLowerCase() ?? '',
     post.user?.id ?? null,
@@ -47,7 +47,30 @@ export async function upsertTweet(
     post.text ?? '',
     (post.images && post.images.length > 0) ? 1 : 0,
     Number(parserVersion ?? 1),
-  ).run();
+  );
+}
+
+export async function upsertTweet(
+  env: Env,
+  archiveUrl: string,
+  post: Post,
+  parserVersion = env.PARSER_VERSION,
+): Promise<void> {
+  if (!env.OMOT_DB) return;
+
+  await bindUpsertTweet(env.OMOT_DB, archiveUrl, post, parserVersion).run();
+}
+
+export async function upsertTweets(
+  env: Env,
+  tweets: Array<{ archiveUrl: string; post: Post; parserVersion?: string }>,
+): Promise<void> {
+  if (!env.OMOT_DB || tweets.length === 0) return;
+
+  const statements = tweets.map(({ archiveUrl, post, parserVersion }) => (
+    bindUpsertTweet(env.OMOT_DB, archiveUrl, post, parserVersion ?? env.PARSER_VERSION)
+  ));
+  await env.OMOT_DB.batch(statements);
 }
 
 export async function logAccess(env: Env, username: string): Promise<void> {
